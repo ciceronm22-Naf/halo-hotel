@@ -17,613 +17,870 @@ import {
   RefreshCw,
   AlertCircle,
   Building2,
+  Search,
+  CheckCircle2,
+  Clock3,
+  ArrowUpRight,
+  Lock,
+  Mail,
+  Eye,
+  EyeOff,
 } from "lucide-react";
+
 import { supabase } from "./supabase";
 
+/* =========================================================
+   DESIGN
+========================================================= */
+
 const C = {
-  blue: "#2563eb",
-  blueLight: "#eff6ff",
-  bg: "#f5f7fb",
-  text: "#172033",
-  muted: "#6b7280",
-  border: "#e5e7eb",
-  dark: "#111827",
-  green: "#166534",
-  greenBg: "#dcfce7",
-  red: "#991b1b",
-  redBg: "#fee2e2",
+  ink: "#1B2430",
+  inkSoft: "#2A3444",
+  paper: "#F6F4EF",
+  card: "#FFFFFF",
+  line: "#E6E2D8",
+  stone: "#8A8578",
+
+  teal: "#2F6F62",
+  tealLight: "#DCEAE6",
+  tealDeep: "#1F4B41",
+
+  clay: "#C1622C",
+  clayLight: "#F3E0D3",
+
+  sage: "#7A8C6E",
+  sageLight: "#E6EBDF",
+
+  amber: "#D9A441",
+  amberLight: "#F7ECD6",
+
+  red: "#B4463D",
+  redLight: "#F3DEDB",
 };
 
+/* =========================================================
+   ROLES
+========================================================= */
+
 const ROLE_LABELS = {
-  super_admin: "Super-Administrateur",
+  super_admin: "Super-Admin",
   admin: "Administrateur",
   manager: "Gérant",
   receptionist: "Réceptionniste",
 };
 
-const MENU = [
-  {
-    id: "dashboard",
-    label: "Tableau de bord",
-    icon: LayoutDashboard,
-  },
-  {
-    id: "rooms",
-    label: "Chambres",
-    icon: BedDouble,
-  },
-  {
-    id: "reservations",
-    label: "Réservations",
-    icon: CalendarDays,
-  },
-  {
-    id: "clients",
-    label: "Clients",
-    icon: Users,
-  },
-  {
-    id: "finances",
-    label: "Finances",
-    icon: Wallet,
-  },
-  {
-    id: "payments",
-    label: "Paiements",
-    icon: Receipt,
-  },
-  {
-    id: "notifications",
-    label: "Notifications",
-    icon: Bell,
-  },
-  {
-    id: "settings",
-    label: "Paramètres",
-    icon: Settings,
-  },
-];
-
 const PERMISSIONS = {
+  super_admin: [
+    "dashboard",
+    "etablissements",
+    "facturation",
+    "utilisateurs",
+    "reglages",
+  ],
+
   admin: [
     "dashboard",
-    "rooms",
-    "reservations",
+    "planning",
+    "mouvements",
+    "chambres",
     "clients",
-    "finances",
-    "payments",
+    "finance",
+    "utilisateurs",
     "notifications",
-    "settings",
+    "reglages",
   ],
 
   manager: [
     "dashboard",
-    "rooms",
-    "reservations",
+    "planning",
+    "mouvements",
+    "chambres",
     "clients",
-    "finances",
-    "payments",
+    "finance",
+    "utilisateurs",
     "notifications",
   ],
 
   receptionist: [
     "dashboard",
-    "rooms",
-    "reservations",
+    "planning",
+    "mouvements",
+    "chambres",
     "clients",
-    "payments",
     "notifications",
   ],
 };
 
-function initials(name = "Utilisateur") {
-  return name
+/* =========================================================
+   MENU
+========================================================= */
+
+const MENU = [
+  {
+    key: "dashboard",
+    label: "Tableau de bord",
+    icon: LayoutDashboard,
+  },
+  {
+    key: "planning",
+    label: "Planning",
+    icon: CalendarDays,
+  },
+  {
+    key: "mouvements",
+    label: "Mouvements",
+    icon: TrendingUp,
+  },
+  {
+    key: "chambres",
+    label: "Chambres",
+    icon: BedDouble,
+  },
+  {
+    key: "clients",
+    label: "Clients",
+    icon: Users,
+  },
+  {
+    key: "finance",
+    label: "Finance",
+    icon: Wallet,
+  },
+  {
+    key: "utilisateurs",
+    label: "Utilisateurs",
+    icon: UserPlus,
+  },
+  {
+    key: "notifications",
+    label: "Notifications",
+    icon: Bell,
+  },
+  {
+    key: "reglages",
+    label: "Réglages",
+    icon: Settings,
+  },
+];
+
+/* =========================================================
+   SUPER ADMIN MENU
+========================================================= */
+
+const SUPER_ADMIN_MENU = [
+  {
+    key: "dashboard",
+    label: "Tableau de bord",
+    icon: LayoutDashboard,
+  },
+  {
+    key: "etablissements",
+    label: "Établissements",
+    icon: Building2,
+  },
+  {
+    key: "facturation",
+    label: "Facturation",
+    icon: Receipt,
+  },
+  {
+    key: "utilisateurs",
+    label: "Administrateurs",
+    icon: UserPlus,
+  },
+  {
+    key: "reglages",
+    label: "Réglages",
+    icon: Settings,
+  },
+];
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+function initials(name = "") {
+  const parts = name
+    .trim()
     .split(/\s+/)
-    .filter(Boolean)
+    .filter(Boolean);
+
+  if (!parts.length) return "HH";
+
+  return parts
     .slice(0, 2)
-    .map((x) => x[0].toUpperCase())
+    .map((part) => part[0]?.toUpperCase())
     .join("");
 }
 
+function formatMoney(value) {
+  const number = Number(value || 0);
+
+  return new Intl.NumberFormat("fr-FR", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(number);
+}
+
+function formatDate(dateString) {
+  if (!dateString) return "—";
+
+  try {
+    return new Intl.DateTimeFormat("fr-FR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(new Date(dateString));
+  } catch {
+    return dateString;
+  }
+}
+
+/* =========================================================
+   APP
+========================================================= */
+
 export default function App() {
   const [session, setSession] = useState(null);
+
   const [profile, setProfile] = useState(null);
   const [hotel, setHotel] = useState(null);
 
   const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(false);
 
-  const [page, setPage] = useState("dashboard");
-  const [mobileMenu, setMobileMenu] = useState(false);
+  const [activePage, setActivePage] = useState("dashboard");
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const [authMode, setAuthMode] = useState("login");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
 
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+
+  const [authError, setAuthError] = useState("");
+  const [authMessage, setAuthMessage] = useState("");
+
+  /* =======================================================
+     AUTH SESSION
+  ======================================================= */
 
   useEffect(() => {
-    let alive = true;
+    let mounted = true;
 
-    async function start() {
-      const { data } = await supabase.auth.getSession();
+    async function initialize() {
+      setLoading(true);
 
-      if (!alive) return;
+      const {
+        data: { session: currentSession },
+      } = await supabase.auth.getSession();
 
-      const currentSession = data.session || null;
+      if (!mounted) return;
 
       setSession(currentSession);
+      setLoading(false);
 
       if (currentSession) {
         await loadProfile(currentSession.user.id);
-      } else {
-        setLoading(false);
       }
     }
 
+    initialize();
+
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
-      if (!alive) return;
+    } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      if (!mounted) return;
 
-      setSession(nextSession || null);
+      setSession(currentSession);
 
-      if (nextSession) {
-        await loadProfile(nextSession.user.id);
-      } else {
+      if (!currentSession) {
         setProfile(null);
         setHotel(null);
-        setLoading(false);
+        setActivePage("dashboard");
+        return;
+      }
+
+      if (
+        event === "SIGNED_IN" ||
+        event === "TOKEN_REFRESHED" ||
+        event === "USER_UPDATED"
+      ) {
+        await loadProfile(currentSession.user.id);
       }
     });
 
-    start();
-
     return () => {
-      alive = false;
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
 
+  /* =======================================================
+     PASSWORD RECOVERY DETECTION
+  ======================================================= */
+
+  useEffect(() => {
+    const hash = window.location.hash || "";
+
+    if (
+      hash.includes("type=recovery") ||
+      hash.includes("access_token=")
+    ) {
+      setAuthMode("reset");
+    }
+  }, []);
+
+  /* =======================================================
+     LOAD PROFILE
+  ======================================================= */
+
   async function loadProfile(userId) {
-    setLoading(true);
-    setError("");
+    setProfileLoading(true);
+    setAuthError("");
 
-    const { data, error } = await supabase
-      .from("admins")
-      .select(
-        "id, hotel_id, full_name, email, role, status"
-      )
-      .eq("auth_user_id", userId)
-      .maybeSingle();
-
-    if (error) {
-      setError(error.message);
-      setLoading(false);
-      return;
-    }
-
-    if (!data) {
-      setProfile(null);
-      setHotel(null);
-      setError(
-        "Votre compte existe dans Supabase Auth, mais aucun profil Hôtel Halo ne lui est associé."
-      );
-      setLoading(false);
-      return;
-    }
-
-    if (data.status !== "active") {
-      await supabase.auth.signOut();
-
-      setProfile(null);
-      setHotel(null);
-      setError("Ce compte est désactivé.");
-      setLoading(false);
-
-      return;
-    }
-
-    setProfile(data);
-
-    if (data.hotel_id) {
-      const { data: hotelData } = await supabase
-        .from("hotels")
+    try {
+      const { data, error } = await supabase
+        .from("admins")
         .select(
-          "id, name, email, phone, address, status"
+          `
+            id,
+            hotel_id,
+            auth_user_id,
+            full_name,
+            email,
+            role,
+            status,
+            invited_at,
+            last_login_at
+          `
         )
-        .eq("id", data.hotel_id)
+        .eq("auth_user_id", userId)
         .maybeSingle();
 
-      setHotel(hotelData || null);
-    } else {
-      setHotel(null);
+      if (error) {
+        console.error(error);
+        setAuthError(
+          "Impossible de charger votre profil administrateur."
+        );
+        return;
+      }
+
+      if (!data) {
+        setAuthError(
+          "Votre compte existe mais aucun profil administrateur n'est associé."
+        );
+        return;
+      }
+
+      if (data.status !== "active") {
+        await supabase.auth.signOut();
+
+        setAuthError(
+          "Ce compte est désactivé. Contactez le Super-Admin."
+        );
+
+        return;
+      }
+
+      setProfile(data);
+
+      /* ===================================================
+         LOAD HOTEL
+      =================================================== */
+
+      if (data.hotel_id) {
+        const { data: hotelData, error: hotelError } = await supabase
+          .from("hotels")
+          .select("*")
+          .eq("id", data.hotel_id)
+          .maybeSingle();
+
+        if (!hotelError) {
+          setHotel(hotelData);
+        }
+      } else {
+        setHotel(null);
+      }
+
+      /* ===================================================
+         LAST LOGIN
+      =================================================== */
+
+      await supabase
+        .from("admins")
+        .update({
+          last_login_at: new Date().toISOString(),
+        })
+        .eq("id", data.id);
+    } finally {
+      setProfileLoading(false);
+    }
+  }
+
+  /* =======================================================
+     LOGIN
+  ======================================================= */
+
+  async function handleLogin(event) {
+    event.preventDefault();
+
+    setAuthError("");
+    setAuthMessage("");
+
+    if (!email.trim() || !password) {
+      setAuthError("Veuillez renseigner votre email et votre mot de passe.");
+      return;
+    }
+
+    setLoading(true);
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+
+    if (error) {
+      setLoading(false);
+
+      setAuthError(
+        error.message === "Invalid login credentials"
+          ? "Email ou mot de passe incorrect."
+          : error.message
+      );
+
+      return;
+    }
+
+    setSession(data.session);
+
+    if (data.session?.user?.id) {
+      await loadProfile(data.session.user.id);
     }
 
     setLoading(false);
   }
 
-  async function login(event) {
+  /* =======================================================
+     FORGOT PASSWORD
+  ======================================================= */
+
+  async function handleForgotPassword(event) {
     event.preventDefault();
 
-    setBusy(true);
-    setError("");
-    setMessage("");
+    setAuthError("");
+    setAuthMessage("");
 
-    const { error } =
-      await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-    if (error) {
-      setError(error.message);
-    }
-
-    setBusy(false);
-  }
-
-  async function forgotPassword(event) {
-    event.preventDefault();
-
-    setBusy(true);
-    setError("");
-    setMessage("");
-
-    const { error } =
-      await supabase.auth.resetPasswordForEmail(
-        email,
-        {
-          redirectTo: window.location.origin,
-        }
-      );
-
-    if (error) {
-      setError(error.message);
-    } else {
-      setMessage(
-        "Si cette adresse possède un compte, un lien de réinitialisation a été envoyé."
-      );
-    }
-
-    setBusy(false);
-  }
-
-  async function changePassword(event) {
-    event.preventDefault();
-
-    setBusy(true);
-    setError("");
-    setMessage("");
-
-    if (newPassword.length < 8) {
-      setError(
-        "Le nouveau mot de passe doit contenir au moins 8 caractères."
-      );
-
-      setBusy(false);
+    if (!email.trim()) {
+      setAuthError("Entrez votre adresse email.");
       return;
     }
+
+    setLoading(true);
+
+    const redirectTo = `${window.location.origin}/`;
+
+    const { error } = await supabase.auth.resetPasswordForEmail(
+      email.trim(),
+      {
+        redirectTo,
+      }
+    );
+
+    setLoading(false);
+
+    if (error) {
+      setAuthError(error.message);
+      return;
+    }
+
+    setAuthMessage(
+      "Un email de récupération a été envoyé si cette adresse correspond à un compte."
+    );
+  }
+
+  /* =======================================================
+     RESET PASSWORD
+  ======================================================= */
+
+  async function handleResetPassword(event) {
+    event.preventDefault();
+
+    setAuthError("");
+    setAuthMessage("");
+
+    if (!newPassword || !confirmPassword) {
+      setAuthError("Veuillez remplir les deux champs.");
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setAuthError(
+        "Le nouveau mot de passe doit contenir au moins 8 caractères."
+      );
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setAuthError(
+        "Les deux mots de passe ne correspondent pas."
+      );
+      return;
+    }
+
+    setLoading(true);
 
     const { error } = await supabase.auth.updateUser({
       password: newPassword,
     });
 
+    setLoading(false);
+
     if (error) {
-      setError(error.message);
-    } else {
-      setMessage(
-        "Mot de passe modifié avec succès."
-      );
-
-      setNewPassword("");
-
-      window.history.replaceState(
-        {},
-        document.title,
-        window.location.pathname
-      );
+      setAuthError(error.message);
+      return;
     }
 
-    setBusy(false);
+    setNewPassword("");
+    setConfirmPassword("");
+
+    setAuthMessage(
+      "Votre mot de passe a été réinitialisé avec succès."
+    );
+
+    window.history.replaceState(
+      {},
+      document.title,
+      window.location.pathname
+    );
+
+    setAuthMode("login");
   }
 
-  async function logout() {
+  /* =======================================================
+     LOGOUT
+  ======================================================= */
+
+  async function handleLogout() {
     await supabase.auth.signOut();
 
-    setPage("dashboard");
+    setSession(null);
+    setProfile(null);
+    setHotel(null);
+    setActivePage("dashboard");
+    setAuthMode("login");
   }
 
-  const allowed = useMemo(() => {
-    if (!profile) return [];
+  /* =======================================================
+     ROLE
+  ======================================================= */
 
-    return MENU.filter((item) =>
-      (PERMISSIONS[profile.role] || []).includes(
-        item.id
-      )
-    );
-  }, [profile]);
+  const role = profile?.role || null;
+
+  const isSuperAdmin = role === "super_admin";
+
+  const allowedPages = useMemo(() => {
+    if (!role) return [];
+
+    return PERMISSIONS[role] || [];
+  }, [role]);
+
+  const currentMenu = isSuperAdmin
+    ? SUPER_ADMIN_MENU
+    : MENU.filter((item) => allowedPages.includes(item.key));
+
+  /* =======================================================
+     PROTECTION PAGE
+  ======================================================= */
 
   useEffect(() => {
-    if (
-      profile &&
-      allowed.length > 0 &&
-      !allowed.some((item) => item.id === page)
-    ) {
-      setPage("dashboard");
+    if (!profile) return;
+
+    const allowed = isSuperAdmin
+      ? SUPER_ADMIN_MENU.map((item) => item.key)
+      : allowedPages;
+
+    if (!allowed.includes(activePage)) {
+      setActivePage("dashboard");
     }
-  }, [profile, allowed, page]);
+  }, [profile, activePage, allowedPages, isSuperAdmin]);
 
-  const recovery =
-    window.location.hash.includes(
-      "type=recovery"
-    );
+  /* =======================================================
+     LOADING
+  ======================================================= */
 
-  if (loading) {
-    return <Loading />;
+  if (loading && !profile && !session) {
+    return <SplashScreen />;
   }
 
-  if (recovery) {
+  /* =======================================================
+     RESET PASSWORD
+  ======================================================= */
+
+  if (authMode === "reset") {
     return (
-      <AuthShell
+      <AuthLayout
         title="Nouveau mot de passe"
         subtitle="Choisissez un nouveau mot de passe sécurisé."
       >
-        <form
-          onSubmit={changePassword}
-          style={styles.form}
-        >
-          <input
-            style={styles.input}
-            type="password"
-            minLength="8"
-            required
-            placeholder="Nouveau mot de passe"
+        <form onSubmit={handleResetPassword}>
+          <Field
+            label="Nouveau mot de passe"
+            type={showNewPassword ? "text" : "password"}
             value={newPassword}
-            onChange={(event) =>
-              setNewPassword(event.target.value)
+            onChange={setNewPassword}
+            placeholder="Au moins 8 caractères"
+            icon={Lock}
+            rightIcon={
+              showNewPassword ? EyeOff : Eye
+            }
+            onRightIconClick={() =>
+              setShowNewPassword((value) => !value)
             }
           />
 
-          <button
-            style={styles.primary}
-            disabled={busy}
-          >
-            {busy
+          <Field
+            label="Confirmer le mot de passe"
+            type="password"
+            value={confirmPassword}
+            onChange={setConfirmPassword}
+            placeholder="Répétez le mot de passe"
+            icon={Lock}
+          />
+
+          {authError && (
+            <AlertBox type="error">
+              {authError}
+            </AlertBox>
+          )}
+
+          {authMessage && (
+            <AlertBox type="success">
+              {authMessage}
+            </AlertBox>
+          )}
+
+          <PrimaryButton disabled={loading}>
+            {loading
               ? "Enregistrement..."
-              : "Changer le mot de passe"}
-          </button>
-
-          {message && (
-            <div style={styles.success}>
-              {message}
-            </div>
-          )}
-
-          {error && (
-            <div style={styles.error}>
-              {error}
-            </div>
-          )}
+              : "Enregistrer le nouveau mot de passe"}
+          </PrimaryButton>
         </form>
-      </AuthShell>
+      </AuthLayout>
     );
   }
+
+  /* =======================================================
+     LOGIN
+  ======================================================= */
 
   if (!session || !profile) {
-    return (
-      <AuthShell
-        title={
-          authMode === "forgot"
-            ? "Mot de passe oublié"
-            : "Connexion à Hôtel Halo"
-        }
-        subtitle={
-          authMode === "forgot"
-            ? "Entrez votre adresse e-mail pour recevoir un lien sécurisé."
-            : "Connectez-vous à votre espace d'administration."
-        }
-      >
-        {authMode === "forgot" ? (
-          <form
-            onSubmit={forgotPassword}
-            style={styles.form}
-          >
-            <input
-              style={styles.input}
+    if (authMode === "forgot") {
+      return (
+        <AuthLayout
+          title="Mot de passe oublié"
+          subtitle="Entrez votre email pour recevoir un lien de récupération."
+        >
+          <form onSubmit={handleForgotPassword}>
+            <Field
+              label="Adresse email"
               type="email"
-              required
-              placeholder="Adresse e-mail"
               value={email}
-              onChange={(event) =>
-                setEmail(event.target.value)
-              }
+              onChange={setEmail}
+              placeholder="vous@exemple.com"
+              icon={Mail}
             />
 
-            <button
-              style={styles.primary}
-              disabled={busy}
-            >
-              {busy
+            {authError && (
+              <AlertBox type="error">
+                {authError}
+              </AlertBox>
+            )}
+
+            {authMessage && (
+              <AlertBox type="success">
+                {authMessage}
+              </AlertBox>
+            )}
+
+            <PrimaryButton disabled={loading}>
+              {loading
                 ? "Envoi..."
-                : "Recevoir le lien"}
-            </button>
+                : "Envoyer le lien de récupération"}
+            </PrimaryButton>
 
             <button
               type="button"
-              style={styles.link}
               onClick={() => {
                 setAuthMode("login");
-                setError("");
-                setMessage("");
+                setAuthError("");
+                setAuthMessage("");
               }}
+              style={styles.linkButton}
             >
-              Retour à la connexion
+              ← Retour à la connexion
             </button>
-
-            {message && (
-              <div style={styles.success}>
-                {message}
-              </div>
-            )}
-
-            {error && (
-              <div style={styles.error}>
-                {error}
-              </div>
-            )}
           </form>
-        ) : (
-          <form
-            onSubmit={login}
-            style={styles.form}
-          >
-            <input
-              style={styles.input}
-              type="email"
-              required
-              placeholder="Adresse e-mail"
-              value={email}
-              onChange={(event) =>
-                setEmail(event.target.value)
-              }
-            />
+        </AuthLayout>
+      );
+    }
 
-            <input
-              style={styles.input}
-              type="password"
-              required
-              placeholder="Mot de passe"
-              value={password}
-              onChange={(event) =>
-                setPassword(event.target.value)
-              }
-            />
-
-            <button
-              style={styles.primary}
-              disabled={busy}
-            >
-              {busy
-                ? "Connexion..."
-                : "Se connecter"}
-            </button>
-
-            <button
-              type="button"
-              style={styles.link}
-              onClick={() => {
-                setAuthMode("forgot");
-                setError("");
-                setMessage("");
-              }}
-            >
-              Mot de passe oublié ?
-            </button>
-
-            {error && (
-              <div style={styles.error}>
-                {error}
-              </div>
-            )}
-          </form>
-        )}
-      </AuthShell>
-    );
-  }
-
-  if (profile.role === "super_admin") {
     return (
-      <SuperAdmin
-        profile={profile}
-        onLogout={logout}
-      />
+      <AuthLayout
+        title="Bienvenue sur Hôtel Halo"
+        subtitle="Connectez-vous à votre espace de gestion."
+      >
+        <form onSubmit={handleLogin}>
+          <Field
+            label="Adresse email"
+            type="email"
+            value={email}
+            onChange={setEmail}
+            placeholder="vous@exemple.com"
+            icon={Mail}
+          />
+
+          <Field
+            label="Mot de passe"
+            type={showPassword ? "text" : "password"}
+            value={password}
+            onChange={setPassword}
+            placeholder="Votre mot de passe"
+            icon={Lock}
+            rightIcon={
+              showPassword ? EyeOff : Eye
+            }
+            onRightIconClick={() =>
+              setShowPassword((value) => !value)
+            }
+          />
+
+          {authError && (
+            <AlertBox type="error">
+              {authError}
+            </AlertBox>
+          )}
+
+          {authMessage && (
+            <AlertBox type="success">
+              {authMessage}
+            </AlertBox>
+          )}
+
+          <PrimaryButton disabled={loading}>
+            {loading ? "Connexion..." : "Se connecter"}
+          </PrimaryButton>
+
+          <button
+            type="button"
+            onClick={() => {
+              setAuthMode("forgot");
+              setAuthError("");
+              setAuthMessage("");
+            }}
+            style={styles.linkButton}
+          >
+            Mot de passe oublié ?
+          </button>
+        </form>
+      </AuthLayout>
     );
   }
 
-  const current =
-    allowed.find((item) => item.id === page) ||
-    allowed[0];
+  /* =======================================================
+     MAIN APPLICATION
+  ======================================================= */
 
   return (
     <div style={styles.app}>
-      {mobileMenu && (
+      {menuOpen && (
         <div
-          style={styles.overlay}
-          onClick={() => setMobileMenu(false)}
+          style={styles.mobileOverlay}
+          onClick={() => setMenuOpen(false)}
         />
       )}
 
       <aside
         style={{
           ...styles.sidebar,
-          ...(mobileMenu
-            ? styles.sidebarOpen
-            : {}),
+          ...(menuOpen ? styles.sidebarMobileOpen : {}),
         }}
       >
-        <div style={styles.sidebarHeader}>
-          <div>
-            <div style={styles.hotelName}>
-              🏨 {hotel?.name || "Hôtel Halo"}
-            </div>
+        <div style={styles.logoArea}>
+          <div style={styles.logoMark}>H</div>
 
-            <div style={styles.hotelType}>
-              {ROLE_LABELS[profile.role]}
+          <div>
+            <div style={styles.logoTitle}>Hôtel Halo</div>
+            <div style={styles.logoSubtitle}>
+              {isSuperAdmin
+                ? "Administration plateforme"
+                : "Gestion hôtelière"}
             </div>
           </div>
 
           <button
-            style={styles.close}
-            onClick={() =>
-              setMobileMenu(false)
-            }
+            style={styles.closeMobile}
+            onClick={() => setMenuOpen(false)}
           >
-            <X size={22} />
+            <X size={21} />
           </button>
         </div>
 
-        <div style={styles.menuTitle}>
-          MENU PRINCIPAL
-        </div>
+        <div style={styles.sidebarSection}>
+          <div style={styles.sidebarLabel}>
+            MENU PRINCIPAL
+          </div>
 
-        <nav>
-          {allowed.map((item) => {
+          {currentMenu.map((item) => {
             const Icon = item.icon;
+            const active = activePage === item.key;
 
             return (
               <button
-                key={item.id}
+                key={item.key}
+                onClick={() => {
+                  setActivePage(item.key);
+                  setMenuOpen(false);
+                }}
                 style={{
-                  ...styles.menuItem,
-                  ...(page === item.id
-                    ? styles.menuActive
+                  ...styles.menuButton,
+                  ...(active
+                    ? styles.menuButtonActive
                     : {}),
                 }}
-                onClick={() => {
-                  setPage(item.id);
-                  setMobileMenu(false);
-                }}
               >
-                <Icon size={20} />
+                <Icon size={19} />
                 <span>{item.label}</span>
               </button>
             );
           })}
-        </nav>
+        </div>
 
         <div style={styles.sidebarBottom}>
-          <div style={styles.roleBox}>
-            <Shield size={16} />
-            {ROLE_LABELS[profile.role]}
+          <div style={styles.profileCard}>
+            <div style={styles.avatar}>
+              {initials(profile.full_name)}
+            </div>
+
+            <div style={{ minWidth: 0 }}>
+              <div style={styles.profileName}>
+                {profile.full_name}
+              </div>
+
+              <div style={styles.profileRole}>
+                {ROLE_LABELS[profile.role] || profile.role}
+              </div>
+            </div>
           </div>
 
           <button
-            style={styles.logout}
-            onClick={logout}
+            onClick={handleLogout}
+            style={styles.logoutButton}
           >
             <LogOut size={18} />
             Déconnexion
@@ -633,374 +890,105 @@ export default function App() {
 
       <main style={styles.main}>
         <header style={styles.header}>
-          <button
-            style={styles.menuButton}
-            onClick={() =>
-              setMobileMenu(true)
-            }
-          >
-            <Menu size={24} />
-          </button>
+          <div style={styles.headerLeft}>
+            <button
+              style={styles.mobileMenuButton}
+              onClick={() => setMenuOpen(true)}
+            >
+              <Menu size={22} />
+            </button>
 
-          <div>
-            <h1 style={styles.pageTitle}>
-              {current?.label ||
-                "Tableau de bord"}
-            </h1>
+            <div>
+              <div style={styles.headerTitle}>
+                {getPageTitle(activePage, isSuperAdmin)}
+              </div>
 
-            <p style={styles.pageSubtitle}>
-              Bienvenue, {profile.full_name}
-            </p>
+              <div style={styles.headerSubtitle}>
+                {isSuperAdmin
+                  ? "Vue globale de la plateforme"
+                  : hotel?.name || "Votre établissement"}
+              </div>
+            </div>
           </div>
 
           <div style={styles.headerRight}>
-            <button
-              style={styles.notification}
-            >
-              <Bell size={21} />
-              <span style={styles.badge}>
-                3
-              </span>
+            <button style={styles.iconButton}>
+              <Bell size={20} />
             </button>
 
-            <div style={styles.avatar}>
+            <div style={styles.headerAvatar}>
               {initials(profile.full_name)}
             </div>
           </div>
         </header>
 
-        {page === "dashboard" ? (
-          <Dashboard
-            profile={profile}
-            hotel={hotel}
-            navigate={setPage}
-          />
-        ) : (
-          <ModulePlaceholder
-            page={current}
-            role={profile.role}
-          />
-        )}
+        <div style={styles.content}>
+          {profileLoading ? (
+            <LoadingBlock />
+          ) : isSuperAdmin ? (
+            <SuperAdminPage
+              page={activePage}
+            />
+          ) : (
+            <HotelPage
+              page={activePage}
+              profile={profile}
+              hotel={hotel}
+            />
+          )}
+        </div>
       </main>
     </div>
   );
 }
 
-function Loading() {
-  return (
-    <div style={styles.center}>
-      <RefreshCw
-        size={28}
-        style={{
-          animation:
-            "haloSpin 1s linear infinite",
-        }}
-      />
+/* =========================================================
+   SUPER ADMIN
+========================================================= */
 
-      <strong>
-        Chargement de Hôtel Halo...
-      </strong>
-    </div>
-  );
+function SuperAdminPage({ page }) {
+  if (page === "dashboard") {
+    return <SuperAdminDashboard />;
+  }
+
+  if (page === "etablissements") {
+    return <SuperAdminEstablishments />;
+  }
+
+  if (page === "facturation") {
+    return <SuperAdminBilling />;
+  }
+
+  if (page === "utilisateurs") {
+    return <SuperAdminAdministrators />;
+  }
+
+  if (page === "reglages") {
+    return <SettingsPage />;
+  }
+
+  return <SuperAdminDashboard />;
 }
 
-function AuthShell({
-  title,
-  subtitle,
-  children,
-}) {
-  return (
-    <div style={styles.authPage}>
-      <div style={styles.authCard}>
-        <div style={{ fontSize: 48 }}>
-          🏨
-        </div>
+/* =========================================================
+   SUPER ADMIN DASHBOARD
+========================================================= */
 
-        <h1 style={styles.authTitle}>
-          {title}
-        </h1>
-
-        <p style={styles.authSubtitle}>
-          {subtitle}
-        </p>
-
-        {children}
-
-        <div style={styles.security}>
-          <Shield size={14} />
-          Connexion sécurisée
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Dashboard({
-  profile,
-  hotel,
-  navigate,
-}) {
-  const stats = [
-    [
-      "Chambres disponibles",
-      "—",
-      BedDouble,
-      "Données réelles à connecter",
-    ],
-    [
-      "Chambres occupées",
-      "—",
-      Building2,
-      "Données réelles à connecter",
-    ],
-    [
-      "Réservations",
-      "—",
-      CalendarDays,
-      "Données réelles à connecter",
-    ],
-    [
-      "Revenus du mois",
-      "—",
-      Wallet,
-      "Données réelles à connecter",
-    ],
-  ];
-
-  return (
-    <>
-      <section style={styles.welcome}>
-        <div>
-          <p style={styles.welcomeSmall}>
-            Aujourd'hui
-          </p>
-
-          <h2 style={styles.welcomeTitle}>
-            Bonjour, {profile.full_name} 👋
-          </h2>
-
-          <p
-            style={{
-              margin: 0,
-              opacity: 0.9,
-            }}
-          >
-            {hotel?.name
-              ? `Voici l'activité de ${hotel.name}.`
-              : "Votre espace Hôtel Halo."}
-          </p>
-        </div>
-
-        <div style={styles.date}>
-          <CalendarDays size={19} />
-
-          {new Date().toLocaleDateString(
-            "fr-FR",
-            {
-              day: "2-digit",
-              month: "long",
-              year: "numeric",
-            }
-          )}
-        </div>
-      </section>
-
-      <section style={styles.stats}>
-        {stats.map(
-          ([
-            title,
-            value,
-            Icon,
-            info,
-          ]) => (
-            <div
-              style={styles.stat}
-              key={title}
-            >
-              <div style={styles.statTop}>
-                <div style={styles.statIcon}>
-                  <Icon size={23} />
-                </div>
-
-                <TrendingUp size={18} />
-              </div>
-
-              <p style={styles.statTitle}>
-                {title}
-              </p>
-
-              <div style={styles.statValue}>
-                {value}
-              </div>
-
-              <p style={styles.statInfo}>
-                {info}
-              </p>
-            </div>
-          )
-        )}
-      </section>
-
-      <section style={styles.content}>
-        <div style={styles.panel}>
-          <div style={styles.panelHeader}>
-            <div>
-              <h2
-                style={{
-                  margin: "0 0 5px",
-                }}
-              >
-                Compte sécurisé
-              </h2>
-
-              <p style={styles.muted}>
-                Votre identité et votre rôle
-                sont lus depuis Supabase.
-              </p>
-            </div>
-          </div>
-
-          <div style={styles.info}>
-            <Shield size={30} />
-
-            <div>
-              <strong>
-                {ROLE_LABELS[profile.role]}
-              </strong>
-
-              <p>
-                Les permissions sont
-                appliquées selon votre rôle
-                et protégées par les règles
-                RLS de la base de données.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div style={styles.panel}>
-          <div style={styles.panelHeader}>
-            <div>
-              <h2
-                style={{
-                  margin: "0 0 5px",
-                }}
-              >
-                Accès rapides
-              </h2>
-
-              <p style={styles.muted}>
-                Modules autorisés
-              </p>
-            </div>
-          </div>
-
-          <div style={styles.quick}>
-            <button
-              style={styles.quickBtn}
-              onClick={() =>
-                navigate("reservations")
-              }
-            >
-              <CalendarDays size={24} />
-              Réservations
-            </button>
-
-            <button
-              style={styles.quickBtn}
-              onClick={() =>
-                navigate("clients")
-              }
-            >
-              <UserPlus size={24} />
-              Clients
-            </button>
-
-            <button
-              style={styles.quickBtn}
-              onClick={() =>
-                navigate("rooms")
-              }
-            >
-              <BedDouble size={24} />
-              Chambres
-            </button>
-
-            <button
-              style={styles.quickBtn}
-              onClick={() =>
-                navigate("payments")
-              }
-            >
-              <Receipt size={24} />
-              Paiements
-            </button>
-          </div>
-        </div>
-      </section>
-    </>
-  );
-}
-
-function ModulePlaceholder({
-  page,
-  role,
-}) {
-  const Icon =
-    page?.icon || LayoutDashboard;
-
-  return (
-    <section style={styles.placeholder}>
-      <div style={styles.placeholderIcon}>
-        <Icon size={42} />
-      </div>
-
-      <h2>
-        {page?.label}
-      </h2>
-
-      <p>
-        Ce module est prêt à être connecté
-        aux vraies données métier. Votre
-        rôle actuel est{" "}
-        <strong>
-          {ROLE_LABELS[role]}
-        </strong>
-        .
-      </p>
-
-      <div style={styles.security}>
-        <Shield size={14} />
-        Accès contrôlé par rôle + RLS
-      </div>
-    </section>
-  );
-}
-
-function SuperAdmin({
-  profile,
-  onLogout,
-}) {
+function SuperAdminDashboard() {
   const [hotels, setHotels] = useState([]);
-  const [loading, setLoading] =
-    useState(true);
-  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  async function load() {
+  async function loadHotels() {
     setLoading(true);
-    setError("");
 
-    const { data, error } =
-      await supabase
-        .from("hotels")
-        .select("*")
-        .order("created_at", {
-          ascending: false,
-        });
+    const { data, error } = await supabase
+      .from("hotels")
+      .select("*")
+      .order("created_at", {
+        ascending: false,
+      });
 
-    if (error) {
-      setError(error.message);
-    } else {
+    if (!error) {
       setHotels(data || []);
     }
 
@@ -1008,141 +996,81 @@ function SuperAdmin({
   }
 
   useEffect(() => {
-    load();
+    loadHotels();
   }, []);
 
+  const activeHotels = hotels.filter(
+    (hotel) => hotel.status === "active"
+  ).length;
+
   return (
-    <div style={styles.superPage}>
-      <header style={styles.superHeader}>
-        <div>
-          <h1 style={styles.logo}>
-            Hôtel Halo
-          </h1>
+    <div>
+      <PageIntro
+        eyebrow="SUPER-ADMIN"
+        title="Vue d'ensemble"
+        text="Pilotez les établissements et l'activité de la plateforme Hôtel Halo."
+      />
 
-          <p style={styles.subtitle}>
-            Panneau Super-Admin
-          </p>
-        </div>
+      <div style={styles.kpiGrid}>
+        <KpiCard
+          title="Hôtels actifs"
+          value={activeHotels}
+          icon={Building2}
+          tone="teal"
+        />
 
-        <div style={styles.superRight}>
-          <span style={styles.superRole}>
-            <Shield size={15} />
-            {ROLE_LABELS[profile.role]}
-          </span>
+        <KpiCard
+          title="Total établissements"
+          value={hotels.length}
+          icon={Building2}
+          tone="sage"
+        />
 
+        <KpiCard
+          title="Administrateurs"
+          value="—"
+          icon={Users}
+          tone="amber"
+        />
+
+        <KpiCard
+          title="État plateforme"
+          value="Opérationnelle"
+          icon={CheckCircle2}
+          tone="teal"
+        />
+      </div>
+
+      <SectionCard
+        title="Établissements récents"
+        action={
           <button
-            style={styles.logoutSmall}
-            onClick={onLogout}
-          >
-            <LogOut size={17} />
-            Déconnexion
-          </button>
-        </div>
-      </header>
-
-      <section style={styles.superWelcome}>
-        <div style={{ fontSize: 48 }}>
-          👑
-        </div>
-
-        <div>
-          <h2
-            style={{
-              margin: "0 0 7px",
-            }}
-          >
-            Administration globale
-          </h2>
-
-          <p style={styles.muted}>
-            Seul un compte dont le rôle en
-            base est{" "}
-            <strong>super_admin</strong>{" "}
-            arrive ici.
-          </p>
-        </div>
-      </section>
-
-      <section style={styles.superStats}>
-        <div style={styles.superBox}>
-          <strong>
-            {hotels.length}
-          </strong>
-
-          <span>Hôtels</span>
-        </div>
-
-        <div style={styles.superBox}>
-          <strong>—</strong>
-          <span>Administrateurs</span>
-        </div>
-
-        <div style={styles.superBox}>
-          <strong>—</strong>
-          <span>Utilisateurs</span>
-        </div>
-      </section>
-
-      <section
-        style={{
-          ...styles.panel,
-          margin: "0 auto",
-          maxWidth: 1100,
-        }}
-      >
-        <div style={styles.panelHeader}>
-          <div>
-            <h2
-              style={{
-                margin: "0 0 5px",
-              }}
-            >
-              Établissements
-            </h2>
-
-            <p style={styles.muted}>
-              Données réelles de Supabase
-            </p>
-          </div>
-
-          <button
-            style={styles.refresh}
-            onClick={load}
+            onClick={loadHotels}
+            style={styles.smallButton}
           >
             <RefreshCw size={16} />
             Actualiser
           </button>
-        </div>
-
-        {error && (
-          <div style={styles.errorBox}>
-            <AlertCircle size={17} />
-            {error}
-          </div>
-        )}
-
+        }
+      >
         {loading ? (
-          <div style={styles.empty}>
-            Chargement...
-          </div>
+          <LoadingBlock />
         ) : hotels.length === 0 ? (
-          <div style={styles.empty}>
-            Aucun hôtel enregistré pour le
-            moment.
-          </div>
+          <EmptyState
+            icon={Building2}
+            title="Aucun établissement"
+            text="Les établissements créés par le Super-Admin apparaîtront ici."
+          />
         ) : (
-          <div
-            style={{
-              overflowX: "auto",
-            }}
-          >
+          <div style={styles.tableWrap}>
             <table style={styles.table}>
               <thead>
                 <tr>
-                  <th>Hôtel</th>
+                  <th>Établissement</th>
                   <th>Email</th>
                   <th>Téléphone</th>
                   <th>Statut</th>
+                  <th>Créé le</th>
                 </tr>
               </thead>
 
@@ -1150,26 +1078,30 @@ function SuperAdmin({
                 {hotels.map((hotel) => (
                   <tr key={hotel.id}>
                     <td>
-                      <strong>
-                        {hotel.name}
-                      </strong>
+                      <strong>{hotel.name}</strong>
+                    </td>
+
+                    <td>{hotel.email || "—"}</td>
+
+                    <td>{hotel.phone || "—"}</td>
+
+                    <td>
+                      <StatusBadge
+                        status={
+                          hotel.status === "active"
+                            ? "Actif"
+                            : "Inactif"
+                        }
+                        type={
+                          hotel.status === "active"
+                            ? "success"
+                            : "danger"
+                        }
+                      />
                     </td>
 
                     <td>
-                      {hotel.email || "—"}
-                    </td>
-
-                    <td>
-                      {hotel.phone || "—"}
-                    </td>
-
-                    <td>
-                      <span
-                        style={styles.active}
-                      >
-                        {hotel.status ||
-                          "active"}
-                      </span>
+                      {formatDate(hotel.created_at)}
                     </td>
                   </tr>
                 ))}
@@ -1177,599 +1109,1751 @@ function SuperAdmin({
             </table>
           </div>
         )}
-      </section>
+      </SectionCard>
     </div>
   );
 }
 
+/* =========================================================
+   SUPER ADMIN ESTABLISHMENTS
+========================================================= */
+
+function SuperAdminEstablishments() {
+  const [hotels, setHotels] = useState([]);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  async function loadHotels() {
+    setLoading(true);
+
+    const { data, error } = await supabase
+      .from("hotels")
+      .select("*")
+      .order("created_at", {
+        ascending: false,
+      });
+
+    if (!error) {
+      setHotels(data || []);
+    }
+
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    loadHotels();
+  }, []);
+
+  const filtered = hotels.filter((hotel) => {
+    const text = `
+      ${hotel.name || ""}
+      ${hotel.email || ""}
+      ${hotel.phone || ""}
+    `.toLowerCase();
+
+    return text.includes(search.toLowerCase());
+  });
+
+  return (
+    <div>
+      <PageIntro
+        eyebrow="PLATEFORME"
+        title="Établissements"
+        text="Gérez les hôtels enregistrés sur Hôtel Halo."
+      />
+
+      <SectionCard
+        title={`${filtered.length} établissement(s)`}
+        action={
+          <button
+            onClick={loadHotels}
+            style={styles.smallButton}
+          >
+            <RefreshCw size={16} />
+            Actualiser
+          </button>
+        }
+      >
+        <div style={styles.searchBox}>
+          <Search size={18} />
+          <input
+            value={search}
+            onChange={(event) =>
+              setSearch(event.target.value)
+            }
+            placeholder="Rechercher un établissement..."
+            style={styles.searchInput}
+          />
+        </div>
+
+        {loading ? (
+          <LoadingBlock />
+        ) : filtered.length === 0 ? (
+          <EmptyState
+            icon={Building2}
+            title="Aucun résultat"
+            text="Aucun établissement ne correspond à votre recherche."
+          />
+        ) : (
+          <div style={styles.tableWrap}>
+            <table style={styles.table}>
+              <thead>
+                <tr>
+                  <th>Établissement</th>
+                  <th>Contact</th>
+                  <th>Adresse</th>
+                  <th>Statut</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {filtered.map((hotel) => (
+                  <tr key={hotel.id}>
+                    <td>
+                      <strong>{hotel.name}</strong>
+                    </td>
+
+                    <td>
+                      <div>{hotel.email || "—"}</div>
+                      <div style={styles.mutedText}>
+                        {hotel.phone || ""}
+                      </div>
+                    </td>
+
+                    <td>{hotel.address || "—"}</td>
+
+                    <td>
+                      <StatusBadge
+                        status={
+                          hotel.status === "active"
+                            ? "Actif"
+                            : "Inactif"
+                        }
+                        type={
+                          hotel.status === "active"
+                            ? "success"
+                            : "danger"
+                        }
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </SectionCard>
+    </div>
+  );
+}
+
+/* =========================================================
+   BILLING
+========================================================= */
+
+function SuperAdminBilling() {
+  return (
+    <div>
+      <PageIntro
+        eyebrow="SAAS"
+        title="Facturation"
+        text="Suivez les abonnements et la facturation des établissements."
+      />
+
+      <div style={styles.kpiGrid}>
+        <KpiCard
+          title="MRR"
+          value="—"
+          icon={Wallet}
+          tone="teal"
+        />
+
+        <KpiCard
+          title="Factures payées"
+          value="—"
+          icon={CheckCircle2}
+          tone="sage"
+        />
+
+        <KpiCard
+          title="En attente"
+          value="—"
+          icon={Clock3}
+          tone="amber"
+        />
+
+        <KpiCard
+          title="En retard"
+          value="—"
+          icon={AlertCircle}
+          tone="red"
+        />
+      </div>
+
+      <SectionCard
+        title="Facturation SaaS"
+      >
+        <EmptyState
+          icon={Receipt}
+          title="Module de facturation"
+          text="La gestion détaillée des abonnements sera connectée à la base de données dans l'étape suivante."
+        />
+      </SectionCard>
+    </div>
+  );
+}
+
+/* =========================================================
+   ADMINISTRATORS
+========================================================= */
+
+function SuperAdminAdministrators() {
+  const [admins, setAdmins] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  async function loadAdmins() {
+    setLoading(true);
+
+    const { data, error } = await supabase
+      .from("admins")
+      .select(
+        `
+          id,
+          hotel_id,
+          full_name,
+          email,
+          role,
+          status,
+          created_at,
+          hotels (
+            name
+          )
+        `
+      )
+      .order("created_at", {
+        ascending: false,
+      });
+
+    if (!error) {
+      setAdmins(data || []);
+    }
+
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    loadAdmins();
+  }, []);
+
+  return (
+    <div>
+      <PageIntro
+        eyebrow="ADMINISTRATION"
+        title="Administrateurs"
+        text="Consultez les comptes administrateurs associés aux établissements."
+      />
+
+      <SectionCard
+        title={`${admins.length} compte(s)`}
+        action={
+          <button
+            onClick={loadAdmins}
+            style={styles.smallButton}
+          >
+            <RefreshCw size={16} />
+            Actualiser
+          </button>
+        }
+      >
+        {loading ? (
+          <LoadingBlock />
+        ) : admins.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            title="Aucun administrateur"
+            text="Les administrateurs apparaîtront ici."
+          />
+        ) : (
+          <div style={styles.tableWrap}>
+            <table style={styles.table}>
+              <thead>
+                <tr>
+                  <th>Nom</th>
+                  <th>Email</th>
+                  <th>Établissement</th>
+                  <th>Rôle</th>
+                  <th>Statut</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {admins.map((admin) => (
+                  <tr key={admin.id}>
+                    <td>
+                      <strong>{admin.full_name}</strong>
+                    </td>
+
+                    <td>{admin.email}</td>
+
+                    <td>
+                      {admin.hotels?.name || "Plateforme"}
+                    </td>
+
+                    <td>
+                      {ROLE_LABELS[admin.role] ||
+                        admin.role}
+                    </td>
+
+                    <td>
+                      <StatusBadge
+                        status={
+                          admin.status === "active"
+                            ? "Actif"
+                            : "Inactif"
+                        }
+                        type={
+                          admin.status === "active"
+                            ? "success"
+                            : "danger"
+                        }
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </SectionCard>
+    </div>
+  );
+}
+
+/* =========================================================
+   HOTEL PAGE
+========================================================= */
+
+function HotelPage({ page, profile, hotel }) {
+  switch (page) {
+    case "dashboard":
+      return (
+        <HotelDashboard
+          profile={profile}
+          hotel={hotel}
+        />
+      );
+
+    case "planning":
+      return <PlaceholderModule
+        icon={CalendarDays}
+        title="Planning"
+        text="Le planning des réservations sera connecté à la base de données."
+      />;
+
+    case "mouvements":
+      return <PlaceholderModule
+        icon={TrendingUp}
+        title="Mouvements"
+        text="Les arrivées, départs et séjours en cours seront affichés ici."
+      />;
+
+    case "chambres":
+      return <PlaceholderModule
+        icon={BedDouble}
+        title="Chambres"
+        text="La gestion des chambres sera connectée à la base de données."
+      />;
+
+    case "clients":
+      return <PlaceholderModule
+        icon={Users}
+        title="Clients"
+        text="La gestion des clients sera connectée à la base de données."
+      />;
+
+    case "finance":
+      return <PlaceholderModule
+        icon={Wallet}
+        title="Finance"
+        text="Les recettes, paiements et dépenses seront gérés ici."
+      />;
+
+    case "utilisateurs":
+      return <HotelUsers />;
+      
+    case "notifications":
+      return <PlaceholderModule
+        icon={Bell}
+        title="Notifications"
+        text="Vos notifications et alertes apparaîtront ici."
+      />;
+
+    case "reglages":
+      return <SettingsPage />;
+
+    default:
+      return (
+        <HotelDashboard
+          profile={profile}
+          hotel={hotel}
+        />
+      );
+  }
+}
+
+/* =========================================================
+   HOTEL DASHBOARD
+========================================================= */
+
+function HotelDashboard({ profile, hotel }) {
+  return (
+    <div>
+      <PageIntro
+        eyebrow="HÔTEL"
+        title={`Bonjour ${profile.full_name.split(" ")[0] || ""}`}
+        text={
+          hotel?.name
+            ? `Bienvenue dans l'espace de gestion de ${hotel.name}.`
+            : "Bienvenue dans votre espace de gestion."
+        }
+      />
+
+      <div style={styles.kpiGrid}>
+        <KpiCard
+          title="Chambres disponibles"
+          value="—"
+          icon={BedDouble}
+          tone="teal"
+        />
+
+        <KpiCard
+          title="Arrivées aujourd'hui"
+          value="—"
+          icon={CalendarDays}
+          tone="sage"
+        />
+
+        <KpiCard
+          title="Départs aujourd'hui"
+          value="—"
+          icon={TrendingUp}
+          tone="amber"
+        />
+
+        <KpiCard
+          title="Recettes"
+          value="—"
+          icon={Wallet}
+          tone="clay"
+        />
+      </div>
+
+      <div style={styles.twoColumn}>
+        <SectionCard
+          title="Activité récente"
+        >
+          <EmptyState
+            icon={TrendingUp}
+            title="Aucune activité"
+            text="Les mouvements de l'hôtel apparaîtront ici."
+          />
+        </SectionCard>
+
+        <SectionCard
+          title="État de l'hôtel"
+        >
+          <div style={styles.statusPanel}>
+            <div style={styles.statusIcon}>
+              <CheckCircle2 size={24} />
+            </div>
+
+            <div>
+              <div style={styles.statusTitle}>
+                Système opérationnel
+              </div>
+
+              <div style={styles.statusText}>
+                Votre espace Hôtel Halo est correctement connecté.
+              </div>
+            </div>
+          </div>
+        </SectionCard>
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
+   HOTEL USERS
+========================================================= */
+
+function HotelUsers() {
+  const [admins, setAdmins] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  async function loadUsers() {
+    setLoading(true);
+
+    const { data, error } = await supabase
+      .from("admins")
+      .select(
+        "id, full_name, email, role, status, created_at"
+      )
+      .order("created_at", {
+        ascending: false,
+      });
+
+    if (!error) {
+      setAdmins(data || []);
+    }
+
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  return (
+    <div>
+      <PageIntro
+        eyebrow="ÉQUIPE"
+        title="Utilisateurs"
+        text="Gérez les personnes autorisées à travailler dans cet établissement."
+      />
+
+      <SectionCard
+        title="Membres de l'équipe"
+        action={
+          <button
+            onClick={loadUsers}
+            style={styles.smallButton}
+          >
+            <RefreshCw size={16} />
+            Actualiser
+          </button>
+        }
+      >
+        {loading ? (
+          <LoadingBlock />
+        ) : admins.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            title="Aucun utilisateur"
+            text="Les membres de votre équipe apparaîtront ici."
+          />
+        ) : (
+          <div style={styles.tableWrap}>
+            <table style={styles.table}>
+              <thead>
+                <tr>
+                  <th>Nom</th>
+                  <th>Email</th>
+                  <th>Rôle</th>
+                  <th>Statut</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {admins.map((admin) => (
+                  <tr key={admin.id}>
+                    <td>
+                      <strong>{admin.full_name}</strong>
+                    </td>
+
+                    <td>{admin.email}</td>
+
+                    <td>
+                      {ROLE_LABELS[admin.role] ||
+                        admin.role}
+                    </td>
+
+                    <td>
+                      <StatusBadge
+                        status={
+                          admin.status === "active"
+                            ? "Actif"
+                            : "Inactif"
+                        }
+                        type={
+                          admin.status === "active"
+                            ? "success"
+                            : "danger"
+                        }
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </SectionCard>
+    </div>
+  );
+}
+
+/* =========================================================
+   SETTINGS
+========================================================= */
+
+function SettingsPage() {
+  return (
+    <div>
+      <PageIntro
+        eyebrow="CONFIGURATION"
+        title="Réglages"
+        text="Paramètres et configuration de votre espace Hôtel Halo."
+      />
+
+      <SectionCard title="Sécurité">
+        <div style={styles.settingRow}>
+          <div style={styles.settingIcon}>
+            <Shield size={20} />
+          </div>
+
+          <div>
+            <div style={styles.settingTitle}>
+              Sécurité des accès
+            </div>
+
+            <div style={styles.settingText}>
+              Les rôles et les permissions sont contrôlés côté base de données.
+            </div>
+          </div>
+
+          <StatusBadge
+            status="Activé"
+            type="success"
+          />
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Compte">
+        <div style={styles.settingRow}>
+          <div style={styles.settingIcon}>
+            <Lock size={20} />
+          </div>
+
+          <div>
+            <div style={styles.settingTitle}>
+              Mot de passe
+            </div>
+
+            <div style={styles.settingText}>
+              La récupération du mot de passe est disponible depuis l'écran de connexion.
+            </div>
+          </div>
+        </div>
+      </SectionCard>
+    </div>
+  );
+}
+
+/* =========================================================
+   COMPONENTS
+========================================================= */
+
+function SplashScreen() {
+  return (
+    <div style={styles.splash}>
+      <div style={styles.logoMarkLarge}>H</div>
+
+      <div style={styles.splashTitle}>
+        Hôtel Halo
+      </div>
+
+      <div style={styles.spinner} />
+    </div>
+  );
+}
+
+function AuthLayout({ title, subtitle, children }) {
+  return (
+    <div style={styles.authPage}>
+      <div style={styles.authDecorOne} />
+      <div style={styles.authDecorTwo} />
+
+      <div style={styles.authCard}>
+        <div style={styles.authLogo}>
+          <div style={styles.logoMark}>H</div>
+
+          <div>
+            <div style={styles.logoTitle}>
+              Hôtel Halo
+            </div>
+
+            <div style={styles.logoSubtitle}>
+              Gestion hôtelière
+            </div>
+          </div>
+        </div>
+
+        <div style={styles.authHeading}>
+          {title}
+        </div>
+
+        <div style={styles.authSubtitle}>
+          {subtitle}
+        </div>
+
+        <div style={{ marginTop: 28 }}>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  type,
+  value,
+  onChange,
+  placeholder,
+  icon: Icon,
+  rightIcon: RightIcon,
+  onRightIconClick,
+}) {
+  return (
+    <div style={styles.field}>
+      <label style={styles.label}>
+        {label}
+      </label>
+
+      <div style={styles.inputWrap}>
+        <Icon
+          size={18}
+          style={styles.inputIcon}
+        />
+
+        <input
+          type={type}
+          value={value}
+          onChange={(event) =>
+            onChange(event.target.value)
+          }
+          placeholder={placeholder}
+          style={styles.input}
+          autoComplete={
+            type === "password"
+              ? "current-password"
+              : "email"
+          }
+        />
+
+        {RightIcon && (
+          <button
+            type="button"
+            onClick={onRightIconClick}
+            style={styles.inputAction}
+          >
+            <RightIcon size={18} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PrimaryButton({
+  children,
+  disabled = false,
+}) {
+  return (
+    <button
+      type="submit"
+      disabled={disabled}
+      style={{
+        ...styles.primaryButton,
+        ...(disabled
+          ? styles.buttonDisabled
+          : {}),
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function AlertBox({ type, children }) {
+  const success = type === "success";
+
+  return (
+    <div
+      style={{
+        ...styles.alert,
+        ...(success
+          ? styles.alertSuccess
+          : styles.alertError),
+      }}
+    >
+      {success ? (
+        <CheckCircle2 size={18} />
+      ) : (
+        <AlertCircle size={18} />
+      )}
+
+      <span>{children}</span>
+    </div>
+  );
+}
+
+function PageIntro({
+  eyebrow,
+  title,
+  text,
+}) {
+  return (
+    <div style={styles.pageIntro}>
+      <div style={styles.eyebrow}>
+        {eyebrow}
+      </div>
+
+      <h1 style={styles.pageTitle}>
+        {title}
+      </h1>
+
+      <p style={styles.pageText}>
+        {text}
+      </p>
+    </div>
+  );
+}
+
+function KpiCard({
+  title,
+  value,
+  icon: Icon,
+  tone = "teal",
+}) {
+  const toneMap = {
+    teal: {
+      background: C.tealLight,
+      color: C.teal,
+    },
+
+    sage: {
+      background: C.sageLight,
+      color: C.sage,
+    },
+
+    amber: {
+      background: C.amberLight,
+      color: C.amber,
+    },
+
+    clay: {
+      background: C.clayLight,
+      color: C.clay,
+    },
+
+    red: {
+      background: C.redLight,
+      color: C.red,
+    },
+  };
+
+  const colors =
+    toneMap[tone] || toneMap.teal;
+
+  return (
+    <div style={styles.kpiCard}>
+      <div
+        style={{
+          ...styles.kpiIcon,
+          background: colors.background,
+          color: colors.color,
+        }}
+      >
+        <Icon size={21} />
+      </div>
+
+      <div style={styles.kpiTitle}>
+        {title}
+      </div>
+
+      <div style={styles.kpiValue}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function SectionCard({
+  title,
+  action,
+  children,
+}) {
+  return (
+    <section style={styles.sectionCard}>
+      <div style={styles.sectionHeader}>
+        <h2 style={styles.sectionTitle}>
+          {title}
+        </h2>
+
+        {action}
+      </div>
+
+      <div>
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function StatusBadge({
+  status,
+  type = "success",
+}) {
+  const map = {
+    success: {
+      background: C.sageLight,
+      color: C.tealDeep,
+    },
+
+    danger: {
+      background: C.redLight,
+      color: C.red,
+    },
+
+    warning: {
+      background: C.amberLight,
+      color: "#8A681B",
+    },
+  };
+
+  const colors =
+    map[type] || map.success;
+
+  return (
+    <span
+      style={{
+        ...styles.statusBadge,
+        background: colors.background,
+        color: colors.color,
+      }}
+    >
+      {status}
+    </span>
+  );
+}
+
+function LoadingBlock() {
+  return (
+    <div style={styles.loadingBlock}>
+      <RefreshCw
+        size={20}
+        style={{
+          animation: "haloSpin 1s linear infinite",
+        }}
+      />
+
+      <span>
+        Chargement...
+      </span>
+    </div>
+  );
+}
+
+function EmptyState({
+  icon: Icon,
+  title,
+  text,
+}) {
+  return (
+    <div style={styles.emptyState}>
+      <div style={styles.emptyIcon}>
+        <Icon size={25} />
+      </div>
+
+      <div style={styles.emptyTitle}>
+        {title}
+      </div>
+
+      <div style={styles.emptyText}>
+        {text}
+      </div>
+    </div>
+  );
+}
+
+function PlaceholderModule({
+  icon: Icon,
+  title,
+  text,
+}) {
+  return (
+    <div>
+      <PageIntro
+        eyebrow="MODULE"
+        title={title}
+        text={text}
+      />
+
+      <SectionCard title={title}>
+        <EmptyState
+          icon={Icon}
+          title="Module en préparation"
+          text="La structure de cette fonctionnalité est prête. Nous allons maintenant la connecter aux données réelles."
+        />
+      </SectionCard>
+    </div>
+  );
+}
+
+/* =========================================================
+   PAGE TITLE
+========================================================= */
+
+function getPageTitle(page, isSuperAdmin) {
+  if (isSuperAdmin) {
+    const item = SUPER_ADMIN_MENU.find(
+      (menuItem) => menuItem.key === page
+    );
+
+    return item?.label || "Tableau de bord";
+  }
+
+  const item = MENU.find(
+    (menuItem) => menuItem.key === page
+  );
+
+  return item?.label || "Tableau de bord";
+}
+
+/* =========================================================
+   STYLES
+========================================================= */
+
 const styles = {
   app: {
     minHeight: "100vh",
-    background: C.bg,
-    color: C.text,
+    background: C.paper,
+    color: C.ink,
     display: "flex",
   },
 
-  sidebar: {
-    width: 270,
-    background: C.dark,
-    color: "#fff",
+  splash: {
     minHeight: "100vh",
-    padding: "22px 16px",
-    position: "fixed",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    zIndex: 20,
-    transition: "transform .25s ease",
-  },
-
-  sidebarOpen: {
-    transform: "translateX(0)",
-  },
-
-  sidebarHeader: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "5px 8px 28px",
-  },
-
-  hotelName: {
-    fontSize: 21,
-    fontWeight: 700,
-  },
-
-  hotelType: {
-    color: "#9ca3af",
-    fontSize: 13,
-    marginTop: 5,
-  },
-
-  close: {
-    display: "none",
-    background: "transparent",
-    border: 0,
-    color: "#fff",
-  },
-
-  menuTitle: {
-    fontSize: 11,
-    color: "#6b7280",
-    fontWeight: 700,
-    padding: "0 10px 10px",
-    letterSpacing: 1,
-  },
-
-  menuItem: {
     width: "100%",
-    display: "flex",
-    alignItems: "center",
-    gap: 13,
-    padding: "13px 12px",
-    marginBottom: 5,
-    background: "transparent",
-    color: "#cbd5e1",
-    border: 0,
-    borderRadius: 10,
-    fontSize: 14,
-    textAlign: "left",
-    cursor: "pointer",
-  },
-
-  menuActive: {
-    background: C.blue,
-    color: "#fff",
-  },
-
-  sidebarBottom: {
-    position: "absolute",
-    left: 16,
-    right: 16,
-    bottom: 25,
-  },
-
-  roleBox: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    padding: "10px 12px",
-    border: "1px solid #374151",
-    borderRadius: 9,
-    color: "#d1d5db",
-    fontSize: 12,
-    marginBottom: 10,
-  },
-
-  logout: {
-    width: "100%",
-    padding: 11,
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 8,
-    border: 0,
-    background: "#1f2937",
-    color: "#d1d5db",
-    borderRadius: 9,
-    cursor: "pointer",
-  },
-
-  main: {
-    marginLeft: 270,
-    width: "calc(100% - 270px)",
-    minHeight: "100vh",
-  },
-
-  header: {
-    height: 82,
-    background: "#fff",
-    borderBottom: `1px solid ${C.border}`,
-    padding: "0 30px",
-    display: "flex",
-    alignItems: "center",
-    gap: 18,
-  },
-
-  menuButton: {
-    display: "none",
-    border: 0,
-    background: "transparent",
-    cursor: "pointer",
-  },
-
-  pageTitle: {
-    margin: 0,
-    fontSize: 24,
-  },
-
-  pageSubtitle: {
-    margin: "5px 0 0",
-    color: C.muted,
-    fontSize: 13,
-  },
-
-  headerRight: {
-    marginLeft: "auto",
-    display: "flex",
-    alignItems: "center",
-    gap: 17,
-  },
-
-  notification: {
-    position: "relative",
-    background: "#f3f4f6",
-    border: 0,
-    width: 42,
-    height: 42,
-    borderRadius: "50%",
-    cursor: "pointer",
-  },
-
-  badge: {
-    position: "absolute",
-    right: -2,
-    top: -2,
-    background: "#ef4444",
-    color: "#fff",
-    borderRadius: "50%",
-    width: 19,
-    height: 19,
-    fontSize: 11,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  avatar: {
-    width: 42,
-    height: 42,
-    borderRadius: "50%",
-    background: C.blue,
-    color: "#fff",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontWeight: 700,
-  },
-
-  welcome: {
-    margin: "28px 30px 22px",
-    padding: 26,
-    borderRadius: 16,
-    background: C.blue,
-    color: "#fff",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-
-  welcomeSmall: {
-    margin: 0,
-    opacity: 0.8,
-    fontSize: 13,
-  },
-
-  welcomeTitle: {
-    margin: "7px 0",
-    fontSize: 24,
-  },
-
-  date: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    background: "rgba(255,255,255,.15)",
-    padding: "12px 15px",
-    borderRadius: 10,
-    fontSize: 13,
-  },
-
-  stats: {
-    padding: "0 30px",
-    display: "grid",
-    gridTemplateColumns:
-      "repeat(4,1fr)",
-    gap: 18,
-  },
-
-  stat: {
-    background: "#fff",
-    border: `1px solid ${C.border}`,
-    borderRadius: 15,
-    padding: 19,
-  },
-
-  statTop: {
-    display: "flex",
-    justifyContent: "space-between",
-    color: C.blue,
-  },
-
-  statIcon: {
-    width: 43,
-    height: 43,
-    borderRadius: 10,
-    background: C.blueLight,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  statTitle: {
-    color: C.muted,
-    fontSize: 13,
-    margin: "15px 0 7px",
-  },
-
-  statValue: {
-    fontSize: 26,
-    fontWeight: 700,
-  },
-
-  statInfo: {
-    color: C.muted,
-    fontSize: 12,
-  },
-
-  content: {
-    padding: "22px 30px 40px",
-    display: "grid",
-    gridTemplateColumns:
-      "1.5fr 1fr",
-    gap: 20,
-  },
-
-  panel: {
-    background: "#fff",
-    border: `1px solid ${C.border}`,
-    borderRadius: 15,
-    overflow: "hidden",
-    marginBottom: 25,
-  },
-
-  panelHeader: {
-    padding: 20,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderBottom:
-      "1px solid #eef0f3",
-  },
-
-  muted: {
-    color: C.muted,
-    margin: "5px 0",
-    lineHeight: 1.5,
-  },
-
-  info: {
-    display: "flex",
-    gap: 15,
-    padding: 25,
-    color: C.blue,
-  },
-
-  quick: {
-    padding: 20,
-    display: "grid",
-    gridTemplateColumns:
-      "1fr 1fr",
-    gap: 12,
-  },
-
-  quickBtn: {
-    minHeight: 105,
-    padding: 15,
-    border: `1px solid ${C.border}`,
-    borderRadius: 12,
-    background: "#f9fafb",
     display: "flex",
     flexDirection: "column",
-    alignItems: "flex-start",
+    alignItems: "center",
     justifyContent: "center",
-    gap: 10,
-    cursor: "pointer",
-    color: C.text,
+    background: C.paper,
+    color: C.ink,
   },
 
-  placeholder: {
-    margin: 30,
-    background: "#fff",
-    border: `1px solid ${C.border}`,
-    borderRadius: 16,
-    padding: "70px 25px",
-    textAlign: "center",
+  splashTitle: {
+    fontSize: 28,
+    fontWeight: 800,
+    marginTop: 16,
   },
 
-  placeholderIcon: {
-    width: 85,
-    height: 85,
-    margin: "0 auto 20px",
-    borderRadius: "50%",
-    background: C.blueLight,
-    color: C.blue,
+  logoMarkLarge: {
+    width: 64,
+    height: 64,
+    borderRadius: 18,
+    background: C.teal,
+    color: "#fff",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    fontSize: 32,
+    fontWeight: 900,
+    boxShadow: "0 12px 30px rgba(47,111,98,.20)",
   },
 
-  overlay: {
-    position: "fixed",
-    inset: 0,
-    background: "rgba(0,0,0,.45)",
-    zIndex: 15,
+  spinner: {
+    width: 28,
+    height: 28,
+    borderRadius: "50%",
+    border: `3px solid ${C.line}`,
+    borderTopColor: C.teal,
+    marginTop: 24,
+    animation: "haloSpin 1s linear infinite",
   },
 
   authPage: {
     minHeight: "100vh",
+    background: C.paper,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    background:
-      "linear-gradient(135deg,#eff6ff,#f5f7fb)",
     padding: 20,
+    position: "relative",
+    overflow: "hidden",
+  },
+
+  authDecorOne: {
+    position: "absolute",
+    width: 420,
+    height: 420,
+    borderRadius: "50%",
+    background: C.tealLight,
+    top: -220,
+    left: -180,
+    opacity: 0.65,
+  },
+
+  authDecorTwo: {
+    position: "absolute",
+    width: 360,
+    height: 360,
+    borderRadius: "50%",
+    background: C.clayLight,
+    bottom: -180,
+    right: -140,
+    opacity: 0.55,
   },
 
   authCard: {
+    position: "relative",
+    zIndex: 2,
     width: "100%",
-    maxWidth: 430,
-    background: "#fff",
-    padding: 35,
-    borderRadius: 20,
-    boxShadow:
-      "0 15px 50px rgba(0,0,0,.1)",
-    textAlign: "center",
+    maxWidth: 440,
+    background: C.card,
+    border: `1px solid ${C.line}`,
+    borderRadius: 24,
+    padding: 32,
+    boxShadow: "0 20px 60px rgba(27,36,48,.10)",
   },
 
-  authTitle: {
-    margin: "10px 0 8px",
-    fontSize: 25,
+  authLogo: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 30,
+  },
+
+  authHeading: {
+    fontSize: 28,
+    fontWeight: 800,
+    lineHeight: 1.15,
+    letterSpacing: "-.5px",
   },
 
   authSubtitle: {
-    margin: "0 0 25px",
-    color: C.muted,
+    color: C.stone,
+    marginTop: 9,
     lineHeight: 1.5,
   },
 
-  form: {
+  logoArea: {
+    display: "flex",
+    alignItems: "center",
+    gap: 11,
+    padding: "22px 18px",
+    borderBottom: `1px solid ${C.line}`,
+  },
+
+  logoMark: {
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    background: C.teal,
+    color: "#fff",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 22,
+    fontWeight: 900,
+    flexShrink: 0,
+  },
+
+  logoTitle: {
+    fontWeight: 800,
+    fontSize: 17,
+    color: C.ink,
+  },
+
+  logoSubtitle: {
+    color: C.stone,
+    fontSize: 12,
+    marginTop: 2,
+  },
+
+  sidebar: {
+    width: 260,
+    minHeight: "100vh",
+    background: C.card,
+    borderRight: `1px solid ${C.line}`,
+    position: "fixed",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    zIndex: 30,
     display: "flex",
     flexDirection: "column",
-    gap: 12,
   },
 
-  input: {
-    width: "100%",
-    padding: "13px 14px",
-    border: "1px solid #d1d5db",
-    borderRadius: 10,
-    fontSize: 14,
+  sidebarMobileOpen: {
+    transform: "translateX(0)",
   },
 
-  primary: {
-    padding: 13,
-    border: 0,
-    borderRadius: 10,
-    background: C.blue,
-    color: "#fff",
-    fontWeight: 700,
-    cursor: "pointer",
-  },
-
-  link: {
+  closeMobile: {
+    display: "none",
+    marginLeft: "auto",
     border: 0,
     background: "transparent",
-    color: C.blue,
     cursor: "pointer",
-    padding: 8,
+    color: C.stone,
   },
 
-  error: {
-    background: C.redBg,
-    color: C.red,
-    padding: 11,
-    borderRadius: 9,
-    fontSize: 13,
+  sidebarSection: {
+    padding: "24px 12px",
+    flex: 1,
+    overflowY: "auto",
   },
 
-  success: {
-    background: C.greenBg,
-    color: C.green,
-    padding: 11,
-    borderRadius: 9,
-    fontSize: 13,
+  sidebarLabel: {
+    fontSize: 10,
+    letterSpacing: "1.2px",
+    color: C.stone,
+    fontWeight: 800,
+    padding: "0 10px 10px",
   },
 
-  security: {
+  menuButton: {
+    width: "100%",
+    border: 0,
+    background: "transparent",
+    color: C.inkSoft,
     display: "flex",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    color: C.muted,
-    fontSize: 12,
-    marginTop: 18,
-  },
-
-  center: {
-    minHeight: "100vh",
-    display: "flex",
-    flexDirection: "column",
     gap: 12,
+    padding: "11px 12px",
+    borderRadius: 11,
+    cursor: "pointer",
+    textAlign: "left",
+    marginBottom: 4,
+    fontSize: 14,
+    fontWeight: 600,
+  },
+
+  menuButtonActive: {
+    background: C.tealLight,
+    color: C.tealDeep,
+    fontWeight: 800,
+  },
+
+  sidebarBottom: {
+    padding: 14,
+    borderTop: `1px solid ${C.line}`,
+  },
+
+  profileCard: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    padding: 10,
+    borderRadius: 12,
+    background: C.paper,
+  },
+
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 11,
+    background: C.teal,
+    color: "#fff",
+    display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    color: C.muted,
+    fontWeight: 800,
+    fontSize: 12,
+    flexShrink: 0,
   },
 
-  superPage: {
+  profileName: {
+    fontSize: 13,
+    fontWeight: 800,
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    maxWidth: 160,
+  },
+
+  profileRole: {
+    fontSize: 11,
+    color: C.stone,
+    marginTop: 2,
+  },
+
+  logoutButton: {
+    width: "100%",
+    border: 0,
+    background: "transparent",
+    color: C.red,
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    padding: "12px 10px 5px",
+    cursor: "pointer",
+    fontWeight: 700,
+    fontSize: 13,
+  },
+
+  main: {
+    marginLeft: 260,
+    width: "calc(100% - 260px)",
     minHeight: "100vh",
-    background: C.bg,
-    paddingBottom: 40,
   },
 
-  superHeader: {
-    height: 82,
-    background: "#fff",
-    borderBottom: `1px solid ${C.border}`,
-    padding: "0 30px",
+  header: {
+    height: 76,
+    background: C.card,
+    borderBottom: `1px solid ${C.line}`,
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
+    padding: "0 28px",
+    position: "sticky",
+    top: 0,
+    zIndex: 20,
   },
 
-  logo: {
-    margin: 0,
-    fontSize: 28,
+  headerLeft: {
+    display: "flex",
+    alignItems: "center",
+    gap: 15,
   },
 
-  subtitle: {
-    color: C.muted,
-    margin: "5px 0 0",
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 800,
   },
 
-  superRight: {
+  headerSubtitle: {
+    fontSize: 12,
+    color: C.stone,
+    marginTop: 3,
+  },
+
+  headerRight: {
     display: "flex",
     alignItems: "center",
     gap: 12,
   },
 
-  superRole: {
+  iconButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 11,
+    border: `1px solid ${C.line}`,
+    background: C.card,
+    color: C.inkSoft,
     display: "flex",
     alignItems: "center",
-    gap: 5,
-    padding: "8px 11px",
-    background: C.blueLight,
-    color: C.blue,
-    borderRadius: 20,
+    justifyContent: "center",
+    cursor: "pointer",
+  },
+
+  headerAvatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    background: C.tealLight,
+    color: C.tealDeep,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontWeight: 800,
+    fontSize: 12,
+  },
+
+  mobileMenuButton: {
+    display: "none",
+    border: 0,
+    background: "transparent",
+    cursor: "pointer",
+    color: C.ink,
+    padding: 4,
+  },
+
+  content: {
+    padding: 28,
+    maxWidth: 1500,
+    margin: "0 auto",
+  },
+
+  pageIntro: {
+    marginBottom: 26,
+  },
+
+  eyebrow: {
+    fontSize: 10,
+    fontWeight: 900,
+    letterSpacing: "1.3px",
+    color: C.teal,
+    marginBottom: 7,
+  },
+
+  pageTitle: {
+    margin: 0,
+    fontSize: 30,
+    lineHeight: 1.15,
+    letterSpacing: "-.7px",
+  },
+
+  pageText: {
+    margin: "8px 0 0",
+    color: C.stone,
+    maxWidth: 700,
+    lineHeight: 1.5,
+    fontSize: 14,
+  },
+
+  kpiGrid: {
+    display: "grid",
+    gridTemplateColumns:
+      "repeat(4, minmax(0, 1fr))",
+    gap: 16,
+    marginBottom: 22,
+  },
+
+  kpiCard: {
+    background: C.card,
+    border: `1px solid ${C.line}`,
+    borderRadius: 17,
+    padding: 18,
+    minHeight: 150,
+  },
+
+  kpiIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 18,
+  },
+
+  kpiTitle: {
+    color: C.stone,
     fontSize: 12,
     fontWeight: 700,
   },
 
-  logoutSmall: {
+  kpiValue: {
+    fontSize: 24,
+    fontWeight: 900,
+    marginTop: 5,
+    color: C.ink,
+  },
+
+  sectionCard: {
+    background: C.card,
+    border: `1px solid ${C.line}`,
+    borderRadius: 17,
+    padding: 20,
+    marginBottom: 20,
+  },
+
+  sectionHeader: {
     display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    marginBottom: 18,
+  },
+
+  sectionTitle: {
+    margin: 0,
+    fontSize: 16,
+    fontWeight: 800,
+  },
+
+  smallButton: {
+    display: "inline-flex",
     alignItems: "center",
     gap: 7,
-    padding: "10px 13px",
-    border: 0,
-    borderRadius: 9,
-    background: C.dark,
-    color: "#fff",
-    cursor: "pointer",
-  },
-
-  superWelcome: {
-    maxWidth: 1100,
-    margin: "30px auto 20px",
-    padding: 25,
-    background: "#fff",
-    borderRadius: 16,
-    display: "flex",
-    gap: 18,
-    alignItems: "center",
-    boxShadow:
-      "0 8px 25px rgba(0,0,0,.05)",
-  },
-
-  superStats: {
-    maxWidth: 1100,
-    margin: "0 auto 25px",
-    display: "grid",
-    gridTemplateColumns:
-      "repeat(3,1fr)",
-    gap: 15,
-  },
-
-  superBox: {
-    background: "#fff",
-    padding: 22,
-    borderRadius: 12,
-    display: "flex",
-    flexDirection: "column",
-    gap: 7,
-    textAlign: "center",
-  },
-
-  refresh: {
-    display: "flex",
-    alignItems: "center",
-    gap: 6,
-    border: "1px solid #d1d5db",
-    background: "#fff",
-    padding: "9px 12px",
+    border: `1px solid ${C.line}`,
+    background: C.card,
+    color: C.inkSoft,
+    padding: "8px 11px",
     borderRadius: 9,
     cursor: "pointer",
+    fontSize: 12,
+    fontWeight: 700,
   },
 
-  empty: {
-    padding: 30,
-    textAlign: "center",
-    color: C.muted,
-  },
-
-  errorBox: {
-    margin: 20,
-    padding: 12,
-    background: C.redBg,
-    color: C.red,
-    borderRadius: 9,
-    display: "flex",
-    gap: 8,
+  tableWrap: {
+    width: "100%",
+    overflowX: "auto",
   },
 
   table: {
     width: "100%",
     borderCollapse: "collapse",
+    fontSize: 13,
   },
 
-  active: {
-    display: "inline-block",
-    background: C.greenBg,
-    color: C.green,
+  twoColumn: {
+    display: "grid",
+    gridTemplateColumns:
+      "minmax(0, 1.4fr) minmax(0, 1fr)",
+    gap: 20,
+  },
+
+  searchBox: {
+    display: "flex",
+    alignItems: "center",
+    gap: 9,
+    border: `1px solid ${C.line}`,
+    borderRadius: 11,
+    padding: "0 12px",
+    height: 42,
+    marginBottom: 18,
+    color: C.stone,
+  },
+
+  searchInput: {
+    border: 0,
+    outline: 0,
+    width: "100%",
+    background: "transparent",
+    color: C.ink,
+  },
+
+  mutedText: {
+    color: C.stone,
+    fontSize: 11,
+    marginTop: 3,
+  },
+
+  statusBadge: {
+    display: "inline-flex",
+    alignItems: "center",
     padding: "5px 9px",
-    borderRadius: 20,
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: 800,
+  },
+
+  loadingBlock: {
+    minHeight: 120,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    color: C.stone,
+    fontSize: 13,
+  },
+
+  emptyState: {
+    minHeight: 190,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    textAlign: "center",
+    padding: 25,
+  },
+
+  emptyIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 15,
+    background: C.tealLight,
+    color: C.teal,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+
+  emptyTitle: {
+    fontWeight: 800,
+    fontSize: 14,
+  },
+
+  emptyText: {
+    color: C.stone,
     fontSize: 12,
+    maxWidth: 450,
+    lineHeight: 1.5,
+    marginTop: 5,
+  },
+
+  statusPanel: {
+    display: "flex",
+    alignItems: "center",
+    gap: 14,
+    padding: 16,
+    borderRadius: 13,
+    background: C.sageLight,
+  },
+
+  statusIcon: {
+    width: 45,
+    height: 45,
+    borderRadius: 13,
+    background: C.card,
+    color: C.teal,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  statusTitle: {
+    fontWeight: 800,
+    fontSize: 14,
+  },
+
+  statusText: {
+    color: C.stone,
+    fontSize: 12,
+    lineHeight: 1.45,
+    marginTop: 3,
+  },
+
+  settingRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 13,
+    padding: 14,
+    border: `1px solid ${C.line}`,
+    borderRadius: 13,
+  },
+
+  settingIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    background: C.tealLight,
+    color: C.teal,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+
+  settingTitle: {
+    fontWeight: 800,
+    fontSize: 14,
+  },
+
+  settingText: {
+    color: C.stone,
+    fontSize: 12,
+    lineHeight: 1.45,
+    marginTop: 3,
+  },
+
+  field: {
+    marginBottom: 17,
+  },
+
+  label: {
+    display: "block",
+    fontSize: 12,
+    fontWeight: 800,
+    color: C.inkSoft,
+    marginBottom: 7,
+  },
+
+  inputWrap: {
+    height: 46,
+    border: `1px solid ${C.line}`,
+    borderRadius: 11,
+    display: "flex",
+    alignItems: "center",
+    background: C.card,
+    transition: "border-color .2s",
+  },
+
+  inputIcon: {
+    marginLeft: 13,
+    color: C.stone,
+    flexShrink: 0,
+  },
+
+  input: {
+    border: 0,
+    outline: 0,
+    height: "100%",
+    width: "100%",
+    padding: "0 11px",
+    background: "transparent",
+    color: C.ink,
+    minWidth: 0,
+  },
+
+  inputAction: {
+    border: 0,
+    background: "transparent",
+    color: C.stone,
+    cursor: "pointer",
+    padding: 10,
+    marginRight: 2,
+  },
+
+  primaryButton: {
+    width: "100%",
+    height: 47,
+    border: 0,
+    borderRadius: 11,
+    background: C.teal,
+    color: "#fff",
+    cursor: "pointer",
+    fontWeight: 800,
+    fontSize: 14,
+    boxShadow: "0 8px 20px rgba(47,111,98,.18)",
+  },
+
+  buttonDisabled: {
+    opacity: 0.6,
+    cursor: "not-allowed",
+  },
+
+  linkButton: {
+    display: "block",
+    width: "100%",
+    marginTop: 16,
+    border: 0,
+    background: "transparent",
+    color: C.teal,
+    cursor: "pointer",
+    fontSize: 12,
+    fontWeight: 800,
+    textAlign: "center",
+  },
+
+  alert: {
+    display: "flex",
+    alignItems: "flex-start",
+    gap: 9,
+    borderRadius: 10,
+    padding: 11,
+    fontSize: 12,
+    lineHeight: 1.45,
+    marginBottom: 16,
+  },
+
+  alertError: {
+    background: C.redLight,
+    color: C.red,
+  },
+
+  alertSuccess: {
+    background: C.sageLight,
+    color: C.tealDeep,
+  },
+
+  mobileOverlay: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(0,0,0,.35)",
+    zIndex: 25,
   },
 };
+
+/* =========================================================
+   GLOBAL STYLE
+========================================================= */
 
 if (typeof document !== "undefined") {
   const styleElement =
@@ -1804,9 +2888,36 @@ if (typeof document !== "undefined") {
       font: inherit;
     }
 
+    table th {
+      text-align: left;
+      color: #8A8578;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 12px;
+      border-bottom: 1px solid #E6E2D8;
+      white-space: nowrap;
+    }
+
+    table td {
+      padding: 14px 12px;
+      border-bottom: 1px solid #E6E2D8;
+      vertical-align: middle;
+    }
+
+    table tr:last-child td {
+      border-bottom: 0;
+    }
+
+    @media (max-width: 1000px) {
+      .halo-kpi-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
     @media (max-width: 800px) {
       aside {
         transform: translateX(-100%);
+        transition: transform .25s ease;
       }
 
       main {
@@ -1818,891 +2929,13 @@ if (typeof document !== "undefined") {
         display: block;
       }
     }
+
+    @media (max-width: 700px) {
+      .halo-content {
+        padding: 18px;
+      }
+    }
   `;
 
-  document.head.appendChild(
-    styleElement
-  );
-}
-  const stats = [
-    {
-      title: "Chambres disponibles",
-      value: "18",
-      total: "/ 30",
-      icon: BedDouble,
-      info: "+3 aujourd'hui",
-    },
-    {
-      title: "Chambres occupées",
-      value: "12",
-      total: "/ 30",
-      icon: Building2,
-      info: "40% du total",
-    },
-    {
-      title: "Réservations",
-      value: "24",
-      total: "",
-      icon: CalendarDays,
-      info: "+8 cette semaine",
-    },
-    {
-      title: "Revenus du mois",
-      value: "$12,480",
-      total: "",
-      icon: Wallet,
-      info: "+14.5%",
-    },
-  ];
-
-  const reservations = [
-    {
-      client: "Jean Mukendi",
-      room: "Chambre 204",
-      date: "31 Août 2026",
-      status: "Confirmée",
-    },
-    {
-      client: "Sarah Kabeya",
-      room: "Suite 301",
-      date: "31 Août 2026",
-      status: "En attente",
-    },
-    {
-      client: "David Mbuyi",
-      room: "Chambre 108",
-      date: "01 Sept. 2026",
-      status: "Confirmée",
-    },
-    {
-      client: "Marie Ilunga",
-      room: "Chambre 215",
-      date: "02 Sept. 2026",
-      status: "Confirmée",
-    },
-  ];
-
-  const handleMenuClick = (page) => {
-    setActivePage(page);
-    setMenuOpen(false);
-  };
-
-  if (interfaceType === "superadmin") {
-    return (
-      <div style={styles.page}>
-        <div style={styles.topHeader}>
-          <div>
-            <h1 style={styles.logo}>Hôtel Halo</h1>
-            <p style={styles.subtitle}>Système de gestion de l'hôtel</p>
-          </div>
-
-          <button
-            style={styles.switchButton}
-            onClick={() => setInterfaceType("admin")}
-          >
-            🏨 Administrateur
-          </button>
-        </div>
-
-        <div style={styles.superCard}>
-          <div style={styles.superIcon}>👑</div>
-          <h2>Interface Super-Admin</h2>
-          <p>
-            Gestion globale de la plateforme, des hôtels, des administrateurs
-            et des paramètres du système.
-          </p>
-
-          <div style={styles.superGrid}>
-            <div style={styles.superBox}>
-              <strong>8</strong>
-              <span>Hôtels</span>
-            </div>
-            <div style={styles.superBox}>
-              <strong>32</strong>
-              <span>Administrateurs</span>
-            </div>
-            <div style={styles.superBox}>
-              <strong>156</strong>
-              <span>Utilisateurs</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div style={styles.app}>
-      {menuOpen && (
-        <div
-          style={styles.overlay}
-          onClick={() => setMenuOpen(false)}
-        />
-      )}
-
-      <aside
-        style={{
-          ...styles.sidebar,
-          transform:
-            window.innerWidth <= 800
-              ? menuOpen
-                ? "translateX(0)"
-                : "translateX(-100%)"
-              : "translateX(0)",
-        }}
-      >
-        <div style={styles.sidebarHeader}>
-          <div>
-            <div style={styles.hotelName}>🏨 Hôtel Halo</div>
-            <div style={styles.hotelType}>Administration</div>
-          </div>
-
-          <button
-            style={styles.closeButton}
-            onClick={() => setMenuOpen(false)}
-          >
-            <X size={22} />
-          </button>
-        </div>
-
-        <div style={styles.menuTitle}>MENU PRINCIPAL</div>
-
-        <nav>
-          {adminMenu.map((item) => {
-            const Icon = item.icon;
-            const active = activePage === item.id;
-
-            return (
-              <button
-                key={item.id}
-                onClick={() => handleMenuClick(item.id)}
-                style={{
-                  ...styles.menuItem,
-                  ...(active ? styles.menuItemActive : {}),
-                }}
-              >
-                <Icon size={20} />
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-
-        <div style={styles.sidebarBottom}>
-          <button
-            style={styles.superAdminButton}
-            onClick={() => setInterfaceType("superadmin")}
-          >
-            👑 Passer au Super-Admin
-          </button>
-
-          <button style={styles.logoutButton}>
-            <LogOut size={19} />
-            Déconnexion
-          </button>
-        </div>
-      </aside>
-
-      <main style={styles.main}>
-        <header style={styles.header}>
-          <button
-            style={styles.menuButton}
-            onClick={() => setMenuOpen(true)}
-          >
-            <Menu size={24} />
-          </button>
-
-          <div>
-            <h1 style={styles.pageTitle}>
-              {activePage === "dashboard"
-                ? "Tableau de bord"
-                : adminMenu.find((x) => x.id === activePage)?.label}
-            </h1>
-            <p style={styles.pageSubtitle}>
-              Bienvenue dans votre espace d'administration
-            </p>
-          </div>
-
-          <div style={styles.headerRight}>
-            <button style={styles.notificationButton}>
-              <Bell size={21} />
-              <span style={styles.notificationDot}>3</span>
-            </button>
-
-            <div style={styles.avatar}>AD</div>
-          </div>
-        </header>
-
-        {activePage === "dashboard" ? (
-          <>
-            <section style={styles.welcomeCard}>
-              <div>
-                <p style={styles.welcomeSmall}>Aujourd'hui</p>
-                <h2 style={styles.welcomeTitle}>
-                  Bonjour, Administrateur 👋
-                </h2>
-                <p style={styles.welcomeText}>
-                  Voici un aperçu de l'activité de votre hôtel.
-                </p>
-              </div>
-
-              <div style={styles.dateBox}>
-                <CalendarDays size={20} />
-                31 Août 2026
-              </div>
-            </section>
-
-            <section style={styles.statsGrid}>
-              {stats.map((stat) => {
-                const Icon = stat.icon;
-
-                return (
-                  <div style={styles.statCard} key={stat.title}>
-                    <div style={styles.statTop}>
-                      <div style={styles.statIcon}>
-                        <Icon size={23} />
-                      </div>
-
-                      <TrendingUp size={18} />
-                    </div>
-
-                    <p style={styles.statTitle}>{stat.title}</p>
-
-                    <div style={styles.statValue}>
-                      {stat.value}
-                      <span>{stat.total}</span>
-                    </div>
-
-                    <p style={styles.statInfo}>{stat.info}</p>
-                  </div>
-                );
-              })}
-            </section>
-
-            <section style={styles.contentGrid}>
-              <div style={styles.panel}>
-                <div style={styles.panelHeader}>
-                  <div>
-                    <h2>Réservations récentes</h2>
-                    <p>Les dernières réservations de l'hôtel</p>
-                  </div>
-
-                  <button
-                    style={styles.viewButton}
-                    onClick={() => setActivePage("reservations")}
-                  >
-                    Voir tout <ArrowUpRight size={16} />
-                  </button>
-                </div>
-
-                <div style={styles.reservationList}>
-                  {reservations.map((reservation, index) => (
-                    <div
-                      style={styles.reservation}
-                      key={index}
-                    >
-                      <div style={styles.clientAvatar}>
-                        {reservation.client
-                          .split(" ")
-                          .map((x) => x[0])
-                          .join("")}
-                      </div>
-
-                      <div style={styles.reservationInfo}>
-                        <strong>{reservation.client}</strong>
-                        <span>{reservation.room}</span>
-                      </div>
-
-                      <div style={styles.reservationDate}>
-                        <span>{reservation.date}</span>
-
-                        <div
-                          style={{
-                            ...styles.status,
-                            ...(reservation.status === "Confirmée"
-                              ? styles.statusConfirmed
-                              : styles.statusPending),
-                          }}
-                        >
-                          {reservation.status === "Confirmée" ? (
-                            <CheckCircle2 size={14} />
-                          ) : (
-                            <Clock3 size={14} />
-                          )}
-
-                          {reservation.status}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div style={styles.panel}>
-                <div style={styles.panelHeader}>
-                  <div>
-                    <h2>Actions rapides</h2>
-                    <p>Gérez rapidement votre hôtel</p>
-                  </div>
-                </div>
-
-                <div style={styles.quickGrid}>
-                  <button
-                    style={styles.quickButton}
-                    onClick={() => setActivePage("reservations")}
-                  >
-                    <CalendarDays size={24} />
-                    <span>Nouvelle réservation</span>
-                  </button>
-
-                  <button
-                    style={styles.quickButton}
-                    onClick={() => setActivePage("clients")}
-                  >
-                    <UserPlus size={24} />
-                    <span>Ajouter un client</span>
-                  </button>
-
-                  <button
-                    style={styles.quickButton}
-                    onClick={() => setActivePage("rooms")}
-                  >
-                    <BedDouble size={24} />
-                    <span>Gérer les chambres</span>
-                  </button>
-
-                  <button
-                    style={styles.quickButton}
-                    onClick={() => setActivePage("payments")}
-                  >
-                    <Receipt size={24} />
-                    <span>Enregistrer un paiement</span>
-                  </button>
-                </div>
-              </div>
-            </section>
-          </>
-        ) : (
-          <section style={styles.placeholder}>
-            <div style={styles.placeholderIcon}>
-              {(() => {
-                const current = adminMenu.find(
-                  (x) => x.id === activePage
-                );
-                const Icon = current?.icon || LayoutDashboard;
-                return <Icon size={42} />;
-              })()}
-            </div>
-
-            <h2>
-              {adminMenu.find((x) => x.id === activePage)?.label}
-            </h2>
-
-            <p>
-              Cette section est prête à être développée.
-              Nous allons maintenant y ajouter les fonctionnalités
-              réelles de votre hôtel.
-            </p>
-          </section>
-        )}
-      </main>
-    </div>
-  );
-}
-
-const styles = {
-  app: {
-    minHeight: "100vh",
-    background: "#f5f7fb",
-    fontFamily: "Arial, sans-serif",
-    color: "#172033",
-    display: "flex",
-  },
-
-  sidebar: {
-    width: "270px",
-    background: "#111827",
-    color: "white",
-    minHeight: "100vh",
-    padding: "22px 16px",
-    boxSizing: "border-box",
-    position: "fixed",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    zIndex: 20,
-    transition: "transform 0.25s ease",
-  },
-
-  sidebarHeader: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "5px 8px 28px",
-  },
-
-  hotelName: {
-    fontSize: "21px",
-    fontWeight: "700",
-  },
-
-  hotelType: {
-    color: "#9ca3af",
-    fontSize: "13px",
-    marginTop: "5px",
-  },
-
-  closeButton: {
-    display: "none",
-    background: "transparent",
-    border: "none",
-    color: "white",
-  },
-
-  menuTitle: {
-    fontSize: "11px",
-    color: "#6b7280",
-    fontWeight: "700",
-    padding: "0 10px 10px",
-    letterSpacing: "1px",
-  },
-
-  menuItem: {
-    width: "100%",
-    display: "flex",
-    alignItems: "center",
-    gap: "13px",
-    padding: "13px 12px",
-    marginBottom: "5px",
-    background: "transparent",
-    color: "#cbd5e1",
-    border: "none",
-    borderRadius: "10px",
-    fontSize: "14px",
-    textAlign: "left",
-    cursor: "pointer",
-  },
-
-  menuItemActive: {
-    background: "#2563eb",
-    color: "white",
-  },
-
-  sidebarBottom: {
-    position: "absolute",
-    left: "16px",
-    right: "16px",
-    bottom: "25px",
-  },
-
-  superAdminButton: {
-    width: "100%",
-    padding: "11px",
-    borderRadius: "9px",
-    border: "1px solid #374151",
-    background: "#1f2937",
-    color: "#e5e7eb",
-    cursor: "pointer",
-    marginBottom: "10px",
-  },
-
-  logoutButton: {
-    width: "100%",
-    padding: "11px",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: "8px",
-    borderRadius: "9px",
-    border: "none",
-    background: "#111827",
-    color: "#9ca3af",
-    cursor: "pointer",
-  },
-
-  main: {
-    marginLeft: "270px",
-    width: "calc(100% - 270px)",
-    minHeight: "100vh",
-  },
-
-  header: {
-    height: "82px",
-    background: "white",
-    borderBottom: "1px solid #e5e7eb",
-    padding: "0 30px",
-    display: "flex",
-    alignItems: "center",
-    gap: "18px",
-    boxSizing: "border-box",
-  },
-
-  menuButton: {
-    display: "none",
-    border: "none",
-    background: "transparent",
-    cursor: "pointer",
-  },
-
-  pageTitle: {
-    margin: 0,
-    fontSize: "24px",
-  },
-
-  pageSubtitle: {
-    margin: "5px 0 0",
-    color: "#6b7280",
-    fontSize: "13px",
-  },
-
-  headerRight: {
-    marginLeft: "auto",
-    display: "flex",
-    alignItems: "center",
-    gap: "17px",
-  },
-
-  notificationButton: {
-    position: "relative",
-    background: "#f3f4f6",
-    border: "none",
-    width: "42px",
-    height: "42px",
-    borderRadius: "50%",
-    cursor: "pointer",
-  },
-
-  notificationDot: {
-    position: "absolute",
-    right: "-2px",
-    top: "-2px",
-    background: "#ef4444",
-    color: "white",
-    borderRadius: "50%",
-    width: "19px",
-    height: "19px",
-    fontSize: "11px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  avatar: {
-    width: "42px",
-    height: "42px",
-    borderRadius: "50%",
-    background: "#2563eb",
-    color: "white",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontWeight: "700",
-    fontSize: "13px",
-  },
-
-  welcomeCard: {
-    margin: "28px 30px 22px",
-    padding: "26px",
-    borderRadius: "16px",
-    background: "#2563eb",
-    color: "white",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    boxSizing: "border-box",
-  },
-
-  welcomeSmall: {
-    margin: 0,
-    opacity: 0.8,
-    fontSize: "13px",
-  },
-
-  welcomeTitle: {
-    margin: "7px 0",
-    fontSize: "24px",
-  },
-
-  welcomeText: {
-    margin: 0,
-    opacity: 0.9,
-  },
-
-  dateBox: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    background: "rgba(255,255,255,0.15)",
-    padding: "12px 15px",
-    borderRadius: "10px",
-    fontSize: "13px",
-  },
-
-  statsGrid: {
-    padding: "0 30px",
-    display: "grid",
-    gridTemplateColumns: "repeat(4, 1fr)",
-    gap: "18px",
-  },
-
-  statCard: {
-    background: "white",
-    border: "1px solid #e5e7eb",
-    borderRadius: "15px",
-    padding: "19px",
-  },
-
-  statTop: {
-    display: "flex",
-    justifyContent: "space-between",
-    color: "#2563eb",
-  },
-
-  statIcon: {
-    width: "43px",
-    height: "43px",
-    borderRadius: "10px",
-    background: "#eff6ff",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  statTitle: {
-    color: "#6b7280",
-    fontSize: "13px",
-    margin: "15px 0 7px",
-  },
-
-  statValue: {
-    fontSize: "26px",
-    fontWeight: "700",
-  },
-
-  statValueSpan: {
-    color: "#9ca3af",
-  },
-
-  statInfo: {
-    color: "#16a34a",
-    fontSize: "12px",
-    marginBottom: 0,
-  },
-
-  contentGrid: {
-    padding: "22px 30px 40px",
-    display: "grid",
-    gridTemplateColumns: "1.5fr 1fr",
-    gap: "20px",
-  },
-
-  panel: {
-    background: "white",
-    border: "1px solid #e5e7eb",
-    borderRadius: "15px",
-    overflow: "hidden",
-  },
-
-  panelHeader: {
-    padding: "20px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderBottom: "1px solid #eef0f3",
-  },
-
-  panelHeaderH2: {
-    margin: 0,
-  },
-
-  viewButton: {
-    display: "flex",
-    alignItems: "center",
-    gap: "5px",
-    border: "none",
-    background: "transparent",
-    color: "#2563eb",
-    cursor: "pointer",
-    fontWeight: "600",
-  },
-
-  reservationList: {
-    padding: "0 20px",
-  },
-
-  reservation: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    padding: "15px 0",
-    borderBottom: "1px solid #f0f1f3",
-  },
-
-  clientAvatar: {
-    width: "38px",
-    height: "38px",
-    borderRadius: "50%",
-    background: "#dbeafe",
-    color: "#1d4ed8",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: "11px",
-    fontWeight: "700",
-  },
-
-  reservationInfo: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-    flex: 1,
-    fontSize: "13px",
-  },
-
-  reservationInfoSpan: {
-    color: "#6b7280",
-  },
-
-  reservationDate: {
-    textAlign: "right",
-    fontSize: "11px",
-    color: "#6b7280",
-  },
-
-  status: {
-    display: "flex",
-    alignItems: "center",
-    gap: "4px",
-    marginTop: "6px",
-    padding: "4px 7px",
-    borderRadius: "20px",
-    fontSize: "10px",
-  },
-
-  statusConfirmed: {
-    background: "#dcfce7",
-    color: "#15803d",
-  },
-
-  statusPending: {
-    background: "#fef3c7",
-    color: "#b45309",
-  },
-
-  quickGrid: {
-    padding: "20px",
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: "12px",
-  },
-
-  quickButton: {
-    minHeight: "105px",
-    padding: "15px",
-    border: "1px solid #e5e7eb",
-    borderRadius: "12px",
-    background: "#f9fafb",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "flex-start",
-    justifyContent: "center",
-    gap: "10px",
-    cursor: "pointer",
-    color: "#172033",
-    textAlign: "left",
-  },
-
-  placeholder: {
-    margin: "30px",
-    background: "white",
-    border: "1px solid #e5e7eb",
-    borderRadius: "16px",
-    padding: "70px 25px",
-    textAlign: "center",
-  },
-
-  placeholderIcon: {
-    width: "85px",
-    height: "85px",
-    margin: "0 auto 20px",
-    borderRadius: "50%",
-    background: "#eff6ff",
-    color: "#2563eb",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  placeholderH2: {
-    fontSize: "24px",
-  },
-
-  placeholderP: {
-    maxWidth: "500px",
-    margin: "auto",
-    color: "#6b7280",
-    lineHeight: 1.6,
-  },
-
-  superCard: {
-    maxWidth: "900px",
-    margin: "50px auto",
-    background: "white",
-    padding: "35px",
-    borderRadius: "18px",
-    textAlign: "center",
-    boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
-  },
-
-  superIcon: {
-    fontSize: "55px",
-  },
-
-  superGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(3, 1fr)",
-    gap: "15px",
-    marginTop: "30px",
-  },
-
-  superBox: {
-    background: "#f5f7fb",
-    padding: "22px",
-    borderRadius: "12px",
-    display: "flex",
-    flexDirection: "column",
-    gap: "7px",
-  },
-
-  topHeader: {
-    padding: "30px",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-
-  logo: {
-    margin: 0,
-    fontSize: "28px",
-  },
-
-  subtitle: {
-    color: "#6b7280",
-  },
-
-  switchButton: {
-    padding: "12px 18px",
-    border: "none",
-    borderRadius: "10px",
-    background: "#2563eb",
-    color: "white",
-    cursor: "pointer",
-  },
-
-  overlay: {
-    position: "fixed",
-    inset: 0,
-    background: "rgba(0,0,0,0.45)",
-    zIndex: 15,
-  },
-};
+  document.head.appendChild(styleElement);
+    }
