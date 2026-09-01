@@ -64,4 +64,34 @@ CREATE TABLE payments (
   method VARCHAR(50) NOT NULL,
   status VARCHAR(30) DEFAULT 'paid',
   paid_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);  id BIGSERIAL PRIMARY KEY,
+  hotel_id BIGINT REFERENCES hotels(id) ON DELETE CASCADE,
+  full_name VARCHAR(150) NOT NULL,
+  phone VARCHAR(50),
+  email VARCHAR(150),
+  identity_type VARCHAR(50),
+  identity_number VARCHAR(100),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE reservations (
+  id BIGSERIAL PRIMARY KEY,
+  hotel_id BIGINT REFERENCES hotels(id) ON DELETE CASCADE,
+  client_id BIGINT REFERENCES clients(id) ON DELETE SET NULL,
+  room_id BIGINT REFERENCES rooms(id) ON DELETE SET NULL,
+  check_in DATE NOT NULL,
+  check_out DATE NOT NULL,
+  status VARCHAR(30) DEFAULT 'pending',
+  total_amount DECIMAL(12,2) DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE payments (
+  id BIGSERIAL PRIMARY KEY,
+  hotel_id BIGINT REFERENCES hotels(id) ON DELETE CASCADE,
+  reservation_id BIGINT REFERENCES reservations(id) ON DELETE SET NULL,
+  amount DECIMAL(12,2) NOT NULL,
+  method VARCHAR(50) NOT NULL,
+  status VARCHAR(30) DEFAULT 'paid',
+  paid_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
