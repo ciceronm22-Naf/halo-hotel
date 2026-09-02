@@ -256,33 +256,66 @@ if (isInvite) {
   window.location.hash.includes("type=recovery") ||
   window.location.hash.includes("type=invite") ||
   authMode === "reset"
-){
-    return (
-      <AuthLayout>
-        <AuthHeader />
+) {
+  const isInvitation =
+    window.location.hash.includes("type=invite");
 
-        <form onSubmit={handleResetPassword}>
-          <h1>Réinitialiser le mot de passe</h1>
-          <p className="auth-subtitle">
-            Choisissez un nouveau mot de passe sécurisé.
-          </p>
+  return (
+    <AuthLayout>
+      <AuthHeader />
 
-          <Field
-            label="Nouveau mot de passe"
-            type={showPassword ? "text" : "password"}
-            value={newPassword}
-            onChange={setNewPassword}
-            placeholder="Au moins 8 caractères"
-            icon={Lock}
-            right={
-              <button
-                type="button"
-                className="icon-button"
-                onClick={() => setShowPassword((v) => !v)}
-              >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
-            }
+      <form onSubmit={handleResetPassword}>
+        <h1>
+          {isInvitation
+            ? "Bienvenue sur Hôtel Halo"
+            : "Réinitialiser le mot de passe"}
+        </h1>
+
+        <p className="auth-subtitle">
+          {isInvitation
+            ? "Créez votre mot de passe pour activer votre compte administrateur."
+            : "Choisissez un nouveau mot de passe sécurisé."}
+        </p>
+
+        <Field
+          label="Nouveau mot de passe"
+          type={showPassword ? "text" : "password"}
+          value={newPassword}
+          onChange={setNewPassword}
+          placeholder="Au moins 8 caractères"
+          icon={Lock}
+          right={
+            <button
+              type="button"
+              className="icon-button"
+              onClick={() => setShowPassword((v) => !v)}
+            >
+              {showPassword ? (
+                <EyeOff size={20} />
+              ) : (
+                <Eye size={20} />
+              )}
+            </button>
+          }
+        />
+
+        {authMessage && <Message text={authMessage} />}
+
+        <button
+          className="primary-button"
+          disabled={authLoading}
+          type="submit"
+        >
+          {authLoading
+            ? "Activation..."
+            : isInvitation
+            ? "Créer mon mot de passe"
+            : "Modifier le mot de passe"}
+        </button>
+      </form>
+    </AuthLayout>
+  );
+}
           />
 
           {authMessage && <Message text={authMessage} />}
