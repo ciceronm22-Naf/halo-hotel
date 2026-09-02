@@ -658,13 +658,10 @@ export default async function handler(req, res) {
       .single();
 
     if (invitationError) {
-      console.error(invitationError);
-
-      return res.status(500).json({
-        error:
-          "Impossible d'enregistrer l'invitation.",
-      });
-    }
+  return res.status(500).json({
+    error: "Impossible d'enregistrer l'invitation.",
+  });
+}
 
     return res.status(201).json({
       success: true,
