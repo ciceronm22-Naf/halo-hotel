@@ -15,7 +15,6 @@ const supabaseAdmin = createClient(
 );
 
 export default async function handler(req, res) {
-  // Autoriser uniquement POST
   if (req.method !== "POST") {
     return res.status(405).json({
       error: "Méthode non autorisée",
@@ -23,14 +22,12 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Vérifier la configuration serveur
     if (!supabaseUrl || !serviceRoleKey) {
       return res.status(500).json({
         error: "Configuration serveur Supabase manquante.",
       });
     }
 
-    // Vérifier le token de l'utilisateur connecté
     const authorization = req.headers.authorization || "";
 
     if (!authorization.startsWith("Bearer ")) {
@@ -52,12 +49,12 @@ export default async function handler(req, res) {
       });
     }
 
-    // Vérifier que l'utilisateur est bien Super-Admin
-    const { data: caller, error: callerError } = await supabaseAdmin
-      .from("admins")
-      .select("id, role, status")
-      .eq("auth_user_id", user.id)
-      .single();
+    const { data: caller, error: callerError } =
+      await supabaseAdmin
+        .from("admins")
+        .select("id, role, status")
+        .eq("auth_user_id", user.id)
+        .single();
 
     if (
       callerError ||
@@ -70,29 +67,24 @@ export default async function handler(req, res) {
       });
     }
 
-    // Récupérer les données de l'invitation
     const {
       hotel_id,
       full_name,
       email,
-      role = "admin",
     } = req.body || {};
 
-    // Vérifications
     if (!hotel_id || !full_name || !email) {
       return res.status(400).json({
         error: "hotel_id, full_name et email sont obligatoires.",
       });
     }
 
-    if (!["admin"].includes(role)) {
-      return res.status(400).json({
-        error: "Le rôle doit être administrateur.",
-      });
-    }
+    const normalizedEmail = String(email)
+      .trim()
+      .toLowerCase();
 
-    const normalizedEmail = String(email).trim().toLowerCase();
-    const normalizedName = String(full_name).trim();
+    const normalizedName = String(full_name)
+      .trim();
 
     if (!normalizedName) {
       return res.status(400).json({
@@ -100,12 +92,13 @@ export default async function handler(req, res) {
       });
     }
 
-    // Vérifier que l'hôtel existe
-    const { data: hotel, error: hotelError } = await supabaseAdmin
-      .from("hotels")
-      .select("id, name, status")
-      .eq("id", hotel_id)
-      .single();
+    // Vérifier l'hôtel
+    const { data: hotel, error: hotelError } =
+      await supabaseAdmin
+        .from("hotels")
+        .select("id, name, status")
+        .eq("id", hotel_id)
+        .single();
 
     if (hotelError || !hotel) {
       return res.status(404).json({
@@ -119,7 +112,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // Vérifier qu'il n'existe pas déjà un administrateur pour cet hôtel
+    // Un seul administrateur principal par hôtel
     const { data: existingAdmin, error: existingAdminError } =
       await supabaseAdmin
         .from("admins")
@@ -130,73 +123,108 @@ export default async function handler(req, res) {
 
     if (existingAdminError) {
       return res.status(500).json({
-        error: "Impossible de vérifier l'administrateur existant.",
+        error:
+          "Impossible de vérifier l'administrateur existant.",
       });
     }
 
     if (existingAdmin) {
       return res.status(409).json({
-        error: "Cet établissement possède déjà un administrateur.",
+        error:
+          "Cet établissement possède déjà un administrateur.",
       });
     }
 
-    // Vérifier une invitation déjà en attente
-    const { data: pendingInvitation } = await supabaseAdmin
-      .from("admin_invitations")
-      .select("id, email, expires_at")
-      .eq("hotel_id", hotel_id)
-      .eq("email", normalizedEmail)
-      .eq("status", "pending")
-      .maybeSingle();
+    // Vérifier une invitation active existante
+    const { data: pendingInvitation, error: pendingError } =
+      await supabaseAdmin
+        .from("admin_invitations")
+        .select("id, email, expires_at")
+        .eq("hotel_id", hotel_id)
+        .eq("email", normalizedEmail)
+        .eq("status", "pending")
+        .maybeSingle();
+
+    if (pendingError) {
+      return res.status(500).json({
+        error:
+          "Impossible de vérifier les invitations existantes.",
+      });
+    }
 
     if (pendingInvitation) {
-      return res.status(409).json({
-        error: "Une invitation est déjà en attente pour cet administrateur.",
-      });
+      const expiresAt =
+        new Date(pendingInvitation.expires_at).getTime();
+
+      if (expiresAt > Date.now()) {
+        return res.status(409).json({
+          error:
+            "Une invitation est déjà en attente pour cet administrateur.",
+        });
+      }
+
+      // L'ancienne invitation est expirée.
+      await supabaseAdmin
+        .from("admin_invitations")
+        .update({
+          status: "expired",
+        })
+        .eq("id", pendingInvitation.id);
     }
 
-    // Envoyer l'invitation Supabase Auth
+    // URL officielle de notre application
     const redirectTo =
-  "https://halo-hotel-r8dy26i5d-ciceronm22-naf.vercel.app/?invite=1";
+      "https://halo-hotel-r8dy26i5d-ciceronm22-naf.vercel.app/?invite=1";
 
+    // Créer l'utilisateur Supabase et envoyer l'invitation
     const {
       data: invitedUser,
       error: inviteError,
-    } = await supabaseAdmin.auth.admin.inviteUserByEmail(
-      normalizedEmail,
-      {
-        redirectTo,
-        data: {
-          full_name: normalizedName,
-          hotel_id: hotel_id,
-          role: "admin",
-        },
-      }
-    );
+    } =
+      await supabaseAdmin.auth.admin.inviteUserByEmail(
+        normalizedEmail,
+        {
+          redirectTo,
+          data: {
+            full_name: normalizedName,
+            hotel_id: hotel_id,
+            role: "admin",
+          },
+        }
+      );
 
-    if (inviteError) {
+    if (inviteError || !invitedUser?.user) {
       return res.status(400).json({
-        error: inviteError.message,
+        error:
+          inviteError?.message ||
+          "Impossible de créer l'utilisateur invité.",
       });
     }
 
     // Enregistrer l'invitation
-    const { data: invitation, error: invitationError } =
-      await supabaseAdmin
-        .from("admin_invitations")
-        .insert({
-          hotel_id,
-          invited_by: caller.id,
-          email: normalizedEmail,
-          full_name: normalizedName,
-          role: "admin",
-          auth_user_id: invitedUser.user.id,
-          status: "pending",
-        })
-        .select()
-        .single();
+    const {
+      data: invitation,
+      error: invitationError,
+    } = await supabaseAdmin
+      .from("admin_invitations")
+      .insert({
+        hotel_id,
+        invited_by: caller.id,
+        email: normalizedEmail,
+        full_name: normalizedName,
+        role: "admin",
+        auth_user_id: invitedUser.user.id,
+        status: "pending",
+      })
+      .select()
+      .single();
 
     if (invitationError) {
+      // Éviter de laisser un utilisateur Auth orphelin
+      await supabaseAdmin.auth.admin.deleteUser(
+        invitedUser.user.id
+      );
+
       return res.status(500).json({
         error:
           "L'utilisateur a été créé mais l'invitation n'a pas pu être enregistrée.",
@@ -205,7 +233,8 @@ export default async function handler(req, res) {
 
     return res.status(201).json({
       success: true,
-      message: `Invitation envoyée à ${normalizedEmail}.`,
+      message:
+        `Invitation envoyée à ${normalizedEmail}.`,
       invitation: {
         id: invitation.id,
         hotel_id: invitation.hotel_id,
@@ -214,13 +243,17 @@ export default async function handler(req, res) {
         role: invitation.role,
         status: invitation.status,
         expires_at: invitation.expires_at,
+        auth_user_id: invitation.auth_user_id,
       },
     });
   } catch (error) {
-    console.error("Erreur invitation administrateur:", error);
+    console.error(
+      "Erreur invitation administrateur:",
+      error
+    );
 
     return res.status(500).json({
       error: "Une erreur serveur est survenue.",
     });
   }
-  }
+}
