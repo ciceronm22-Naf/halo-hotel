@@ -254,12 +254,16 @@ if (isInvite) {
 
   if (
   window.location.hash.includes("type=recovery") ||
+  window.location.hash.includes("type=invite") ||
   new URLSearchParams(window.location.search).get("invite") === "1" ||
-  authMode === "reset"
+  authMode === "reset" ||
+  authMode === "invite"
 ) {
   const isInvitation =
-  new URLSearchParams(window.location.search).get("invite") === "1";
-
+    window.location.hash.includes("type=invite") ||
+    new URLSearchParams(window.location.search).get("invite") === "1" ||
+    authMode === "invite";
+  
   return (
     <AuthLayout>
       <AuthHeader />
