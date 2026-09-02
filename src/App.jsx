@@ -1125,89 +1125,373 @@ function StatusBadge({ status }) {
 
 function Administrators() {
   const [admins, setAdmins] = useState([]);
+  const [hotels, setHotels] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showInvite, setShowInvite] = useState(false);
+
+  const [hotelId, setHotelId] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [sending, setSending] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    async function loadAdmins() {
-      const { data, error } = await supabase
-        .from("admins")
-        .select(
-          "id, hotel_id, full_name, email, role, status, invited_at, last_login_at"
-        )
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        console.error(error);
-      } else {
-        setAdmins(data || []);
-      }
-
-      setLoading(false);
-    }
-
-    loadAdmins();
+    loadData();
   }, []);
 
-  return (
-    <>
-      <PageIntro
-        eyebrow="PLATEFORME"
-        title="Administrateurs"
-        description="Gérez les comptes administrateurs associés aux établissements."
-      />
+  async function loadData() {
+    setLoading(true);
+    setError("");
 
-      <section className="panel">
-        <div className="panel-header">
+    const [
+      { data: adminsData, error: adminsError },
+      { data: hotelsData, error: hotelsError },
+    ] = await Promise.all([
+      supabase
+        .from("admins")
+        .select("*")
+        .order("created_at", { ascending: false }),
+
+      supabase
+        .from("hotels")
+        .select("*")
+        .order("name", { ascending: true }),
+    ]);
+
+    if (adminsError) {
+      setError(adminsError.message);
+    }
+
+    if (hotelsError) {
+      setError(hotelsError.message);
+    }
+
+    setAdmins(adminsData || []);
+    setHotels(hotelsData || []);
+    setLoading(false);
+  }
+
+  function openInvite() {
+    setHotelId("");
+    setFullName("");
+    setEmail("");
+    setMessage("");
+    setError("");
+    setShowInvite(true);
+  }
+
+  async function sendInvitation(e) {
+    e.preventDefault();
+
+    setMessage("");
+    setError("");
+
+    if (!hotelId || !fullName.trim() || !email.trim()) {
+      setError("Tous les champs sont obligatoires.");
+      return;
+    }
+
+    setSending(true);
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.access_token) {
+        throw new Error("Votre session Super-Admin est invalide.");
+      }
+
+      const response = await fetch("/api/admin/invite", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          hotel_id: Number(hotelId),
+          full_name: fullName.trim(),
+          email: email.trim().toLowerCase(),
+          role: "admin",
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result?.error || "Impossible d'envoyer l'invitation."
+        );
+      }
+
+      setMessage(
+        result?.message ||
+          `Invitation envoyée à ${email.trim().toLowerCase()}.`
+      );
+
+      setFullName("");
+      setEmail("");
+      setHotelId("");
+
+      await loadData();
+    } catch (err) {
+      setError(err.message || "Une erreur est survenue.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  function getHotelName(hotelId) {
+    const hotel = hotels.find((item) => String(item.id) === String(hotelId));
+    return hotel?.name || "—";
+  }
+
+  const administrators = admins.filter(
+    (admin) => admin.role === "admin" || admin.role === "super_admin"
+  );
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 16,
+          flexWrap: "wrap",
+        }}
+      >
+        <div>
+          <h1
+            style={{
+              margin: 0,
+              color: T.ink,
+              fontSize: 30,
+              fontWeight: 800,
+            }}
+          >
+            Administrateurs
+          </h1>
+
+          <p
+            style={{
+              margin: "8px 0 0",
+              color: T.stone,
+              fontSize: 14,
+            }}
+          >
+            Gérez les administrateurs des établissements Hôtel Halo.
+          </p>
+        </div>
+
+        <button
+          onClick={openInvite}
+          style={{
+            border: "none",
+            borderRadius: 12,
+            padding: "12px 18px",
+            background: T.teal,
+            color: "#fff",
+            fontWeight: 700,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <Plus size={18} />
+          Inviter un administrateur
+        </button>
+      </div>
+
+      {message && (
+        <div
+          style={{
+            padding: 14,
+            borderRadius: 12,
+            background: T.tealLight,
+            color: T.tealDeep,
+            fontWeight: 600,
+          }}
+        >
+          {message}
+        </div>
+      )}
+
+      {error && (
+        <div
+          style={{
+            padding: 14,
+            borderRadius: 12,
+            background: T.redLight,
+            color: T.red,
+            fontWeight: 600,
+          }}
+        >
+          {error}
+        </div>
+      )}
+
+      <div
+        style={{
+          background: T.card,
+          border: `1px solid ${T.line}`,
+          borderRadius: 18,
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            padding: "18px 20px",
+            borderBottom: `1px solid ${T.line}`,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
           <div>
-            <h2>Comptes administrateurs</h2>
-            <p>
-              La création et l'invitation sécurisée seront activées à l'étape suivante.
-            </p>
+            <div
+              style={{
+                fontSize: 17,
+                fontWeight: 800,
+                color: T.ink,
+              }}
+            >
+              Comptes administrateurs
+            </div>
+
+            <div
+              style={{
+                marginTop: 4,
+                color: T.stone,
+                fontSize: 13,
+              }}
+            >
+              {administrators.length} compte
+              {administrators.length > 1 ? "s" : ""}
+            </div>
           </div>
         </div>
 
         {loading ? (
-          <div className="inline-loading">
-            <div className="loading-spinner small" />
+          <div
+            style={{
+              padding: 30,
+              textAlign: "center",
+              color: T.stone,
+            }}
+          >
             Chargement...
           </div>
-        ) : admins.length === 0 ? (
-          <EmptyState
-            icon={Users}
-            title="Aucun administrateur"
-            text="Aucun compte administrateur supplémentaire n'est enregistré."
-          />
+        ) : administrators.length === 0 ? (
+          <div
+            style={{
+              padding: 40,
+              textAlign: "center",
+              color: T.stone,
+            }}
+          >
+            Aucun administrateur pour le moment.
+          </div>
         ) : (
-          <div className="table-wrapper">
-            <table>
+          <div style={{ overflowX: "auto" }}>
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                minWidth: 700,
+              }}
+            >
               <thead>
-                <tr>
-                  <th>Nom</th>
-                  <th>Email</th>
-                  <th>Rôle</th>
-                  <th>Statut</th>
+                <tr
+                  style={{
+                    background: T.paper,
+                    textAlign: "left",
+                  }}
+                >
+                  <th style={{ padding: 14 }}>Nom</th>
+                  <th style={{ padding: 14 }}>Email</th>
+                  <th style={{ padding: 14 }}>Établissement</th>
+                  <th style={{ padding: 14 }}>Rôle</th>
+                  <th style={{ padding: 14 }}>Statut</th>
                 </tr>
               </thead>
 
               <tbody>
-                {admins.map((admin) => (
-                  <tr key={admin.id}>
-                    <td>
-                      <strong>{admin.full_name}</strong>
+                {administrators.map((admin) => (
+                  <tr
+                    key={admin.id}
+                    style={{
+                      borderTop: `1px solid ${T.line}`,
+                    }}
+                  >
+                    <td
+                      style={{
+                        padding: 14,
+                        fontWeight: 700,
+                        color: T.ink,
+                      }}
+                    >
+                      {admin.full_name}
                     </td>
 
-                    <td>{admin.email}</td>
+                    <td style={{ padding: 14, color: T.inkSoft }}>
+                      {admin.email}
+                    </td>
 
-                    <td>
-                      <span className="role-badge">
-                        {roleLabel(admin.role)}
+                    <td style={{ padding: 14, color: T.inkSoft }}>
+                      {admin.role === "super_admin"
+                        ? "Plateforme Hôtel Halo"
+                        : getHotelName(admin.hotel_id)}
+                    </td>
+
+                    <td style={{ padding: 14 }}>
+                      <span
+                        style={{
+                          display: "inline-block",
+                          padding: "6px 10px",
+                          borderRadius: 999,
+                          background:
+                            admin.role === "super_admin"
+                              ? T.clayLight
+                              : T.tealLight,
+                          color:
+                            admin.role === "super_admin"
+                              ? T.clay
+                              : T.tealDeep,
+                          fontSize: 12,
+                          fontWeight: 800,
+                        }}
+                      >
+                        {admin.role === "super_admin"
+                          ? "Super-Admin"
+                          : "Administrateur"}
                       </span>
                     </td>
 
-                    <td>
-                      <StatusBadge
-                        status={admin.status}
-                      />
+                    <td style={{ padding: 14 }}>
+                      <span
+                        style={{
+                          display: "inline-block",
+                          padding: "6px 10px",
+                          borderRadius: 999,
+                          background:
+                            admin.status === "active"
+                              ? T.sageLight
+                              : T.redLight,
+                          color:
+                            admin.status === "active"
+                              ? T.sage
+                              : T.red,
+                          fontSize: 12,
+                          fontWeight: 800,
+                        }}
+                      >
+                        {admin.status === "active"
+                          ? "Actif"
+                          : admin.status}
+                      </span>
                     </td>
                   </tr>
                 ))}
@@ -1215,8 +1499,232 @@ function Administrators() {
             </table>
           </div>
         )}
-      </section>
-    </>
+      </div>
+
+      {showInvite && (
+        <div
+          onClick={() => {
+            if (!sending) setShowInvite(false);
+          }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,.45)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 20,
+            zIndex: 1000,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%",
+              maxWidth: 520,
+              background: T.card,
+              borderRadius: 20,
+              padding: 24,
+              boxShadow: "0 20px 60px rgba(0,0,0,.2)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 20,
+              }}
+            >
+              <div>
+                <h2
+                  style={{
+                    margin: 0,
+                    color: T.ink,
+                    fontSize: 22,
+                  }}
+                >
+                  Inviter un administrateur
+                </h2>
+
+                <p
+                  style={{
+                    margin: "6px 0 0",
+                    color: T.stone,
+                    fontSize: 13,
+                  }}
+                >
+                  L'administrateur recevra un email pour définir son mot de
+                  passe.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowInvite(false)}
+                disabled={sending}
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  fontSize: 24,
+                  color: T.stone,
+                  cursor: "pointer",
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <form
+              onSubmit={sendInvitation}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 16,
+              }}
+            >
+              <label>
+                <div
+                  style={{
+                    marginBottom: 7,
+                    fontWeight: 700,
+                    color: T.ink,
+                  }}
+                >
+                  Établissement
+                </div>
+
+                <select
+                  value={hotelId}
+                  onChange={(e) => setHotelId(e.target.value)}
+                  disabled={sending}
+                  style={{
+                    width: "100%",
+                    padding: "12px 13px",
+                    borderRadius: 10,
+                    border: `1px solid ${T.line}`,
+                    background: "#fff",
+                    color: T.ink,
+                  }}
+                >
+                  <option value="">Sélectionner un établissement</option>
+
+                  {hotels
+                    .filter((hotel) => hotel.status === "active")
+                    .map((hotel) => (
+                      <option key={hotel.id} value={hotel.id}>
+                        {hotel.name}
+                      </option>
+                    ))}
+                </select>
+              </label>
+
+              <label>
+                <div
+                  style={{
+                    marginBottom: 7,
+                    fontWeight: 700,
+                    color: T.ink,
+                  }}
+                >
+                  Nom complet
+                </div>
+
+                <input
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  disabled={sending}
+                  placeholder="Ex. Patrick Mbuyi"
+                  style={{
+                    width: "100%",
+                    padding: "12px 13px",
+                    borderRadius: 10,
+                    border: `1px solid ${T.line}`,
+                    outline: "none",
+                  }}
+                />
+              </label>
+
+              <label>
+                <div
+                  style={{
+                    marginBottom: 7,
+                    fontWeight: 700,
+                    color: T.ink,
+                  }}
+                >
+                  Adresse email
+                </div>
+
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={sending}
+                  placeholder="administrateur@hotel.com"
+                  style={{
+                    width: "100%",
+                    padding: "12px 13px",
+                    borderRadius: 10,
+                    border: `1px solid ${T.line}`,
+                    outline: "none",
+                  }}
+                />
+              </label>
+
+              <div
+                style={{
+                  padding: 12,
+                  borderRadius: 10,
+                  background: T.paper,
+                  color: T.stone,
+                  fontSize: 13,
+                  lineHeight: 1.5,
+                }}
+              >
+                <strong style={{ color: T.ink }}>
+                  Rôle :
+                </strong>{" "}
+                Administrateur de l'établissement.
+                <br />
+                Il pourra ensuite gérer les agents Gérant et Réceptionniste.
+              </div>
+
+              {error && (
+                <div
+                  style={{
+                    padding: 12,
+                    borderRadius: 10,
+                    background: T.redLight,
+                    color: T.red,
+                    fontSize: 13,
+                    fontWeight: 600,
+                  }}
+                >
+                  {error}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={sending}
+                style={{
+                  border: "none",
+                  borderRadius: 12,
+                  padding: "13px 16px",
+                  background: sending ? T.stone : T.teal,
+                  color: "#fff",
+                  fontWeight: 800,
+                  cursor: sending ? "not-allowed" : "pointer",
+                }}
+              >
+                {sending ? "Envoi en cours..." : "Envoyer l'invitation"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
