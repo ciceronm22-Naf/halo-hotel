@@ -84,7 +84,7 @@ function App() {
     : "login"
 );
   const isInviteUrl =
-  isInviteUrl;
+  new URLSearchParams(window.location.search).get("invite") === "1";
   const [authLoading, setAuthLoading] = useState(false);
   const [authMessage, setAuthMessage] = useState("");
   const [email, setEmail] = useState("");
