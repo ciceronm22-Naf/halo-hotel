@@ -78,7 +78,11 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState("dashboard");
   const [mobileMenu, setMobileMenu] = useState(false);
-  const [authMode, setAuthMode] = useState("login");
+  const [authMode, setAuthMode] = useState(
+  new URLSearchParams(window.location.search).get("invite") === "1"
+    ? "invite"
+    : "login"
+);
   const [authLoading, setAuthLoading] = useState(false);
   const [authMessage, setAuthMessage] = useState("");
   const [email, setEmail] = useState("");
