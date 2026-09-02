@@ -135,27 +135,10 @@ export default async function handler(req, res) {
     }
 
     // --------------------------------------------------
-    // 5. Vérifier qu'il n'y a pas déjà un administrateur
-    // --------------------------------------------------
-
-    const {
-      data: existingAdmin,
-      error: existingAdminError,
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-const supabaseAdmin = createClient(
-  supabaseUrl,
-  serviceRoleKey,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  }
-);
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -171,9 +154,16 @@ export default async function handler(req, res) {
       });
     }
 
-    // --------------------------------------------------
-    // 1. Vérifier la session
-    // --------------------------------------------------
+    const supabaseAdmin = createClient(
+      supabaseUrl,
+      serviceRoleKey,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      }
+    );
 
     const authorization = req.headers.authorization || "";
 
@@ -198,10 +188,6 @@ export default async function handler(req, res) {
       });
     }
 
-    // --------------------------------------------------
-    // 2. Vérifier que l'utilisateur est Super-Admin
-    // --------------------------------------------------
-
     const {
       data: caller,
       error: callerError,
@@ -221,10 +207,6 @@ export default async function handler(req, res) {
         error: "Accès réservé au Super-Admin.",
       });
     }
-
-    // --------------------------------------------------
-    // 3. Récupérer les données
-    // --------------------------------------------------
 
     const {
       hotel_id,
@@ -251,7 +233,6 @@ export default async function handler(req, res) {
       });
     }
 
-    // Vérification simple de l'adresse e-mail
     const emailPattern =
       /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -260,10 +241,6 @@ export default async function handler(req, res) {
         error: "Adresse e-mail invalide.",
       });
     }
-
-    // --------------------------------------------------
-    // 4. Vérifier l'hôtel
-    // --------------------------------------------------
 
     const {
       data: hotel,
@@ -285,11 +262,6 @@ export default async function handler(req, res) {
         error: "Cet établissement n'est pas actif.",
       });
     }
-
-    // --------------------------------------------------
-    // 5. Vérifier qu'il n'existe pas déjà
-    //    un administrateur pour cet hôtel
-    // --------------------------------------------------
 
     const {
       data: existingAdmin,
@@ -315,10 +287,6 @@ export default async function handler(req, res) {
       });
     }
 
-    // --------------------------------------------------
-    // 6. Chercher le compte existant dans Supabase Auth
-    // --------------------------------------------------
-
     let existingAuthUser = null;
     let page = 1;
     const perPage = 1000;
@@ -327,11 +295,10 @@ export default async function handler(req, res) {
       const {
         data: usersPage,
         error: usersError,
-      } =
-        await supabaseAdmin.auth.admin.listUsers({
-          page,
-          perPage,
-        });
+      } = await supabaseAdmin.auth.admin.listUsers({
+        page,
+        perPage,
+      });
 
       if (usersError) {
         console.error(
@@ -364,20 +331,12 @@ export default async function handler(req, res) {
       page += 1;
     }
 
-    // --------------------------------------------------
-    // 7. L'adresse doit déjà exister dans Auth
-    // --------------------------------------------------
-
     if (!existingAuthUser) {
       return res.status(404).json({
         error:
           "Aucun compte Supabase Auth ne correspond à cette adresse e-mail. Cette adresse doit d'abord exister dans Auth.",
       });
     }
-
-    // --------------------------------------------------
-    // 8. Vérifier si ce compte est déjà lié
-    // --------------------------------------------------
 
     const {
       data: linkedAdmin,
@@ -410,10 +369,6 @@ export default async function handler(req, res) {
           "Cette adresse e-mail est déjà liée à un compte administrateur.",
       });
     }
-
-    // --------------------------------------------------
-    // 9. Vérifier les invitations existantes
-    // --------------------------------------------------
 
     const {
       data: pendingInvitation,
@@ -455,10 +410,6 @@ export default async function handler(req, res) {
         .eq("id", pendingInvitation.id);
     }
 
-    // --------------------------------------------------
-    // 10. Créer la nouvelle invitation
-    // --------------------------------------------------
-
     const {
       data: invitation,
       error: invitationError,
@@ -490,10 +441,6 @@ export default async function handler(req, res) {
           "Impossible d'enregistrer l'invitation.",
       });
     }
-
-    // --------------------------------------------------
-    // 11. Réponse
-    // --------------------------------------------------
 
     return res.status(201).json({
       success: true,
