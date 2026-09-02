@@ -1217,64 +1217,90 @@ function Administrators() {
   }
 
   async function sendInvitation(e) {
-    e.preventDefault();
+  e.preventDefault();
 
-    setMessage("");
-    setError("");
+  setMessage("");
+  setError("");
 
-    if (!hotelId || !fullName.trim() || !email.trim()) {
-      setError("Tous les champs sont obligatoires.");
-      return;
+  if (!hotelId || !fullName.trim() || !email.trim()) {
+    setError("Tous les champs sont obligatoires.");
+    return;
+  }
+
+  setSending(true);
+
+  try {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session?.access_token) {
+      throw new Error(
+        "Votre session Super-Admin est invalide."
+      );
     }
 
-    setSending(true);
+    // 1. Créer l'invitation côté serveur
+    const response = await fetch("/api/admin/invite", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        hotel_id: Number(hotelId),
+        full_name: fullName.trim(),
+        email: normalizedEmail,
+        role: "admin",
+      }),
+    });
 
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+    const result = await response.json();
 
-      if (!session?.access_token) {
-        throw new Error("Votre session Super-Admin est invalide.");
-      }
+    if (!response.ok) {
+      throw new Error(
+        result?.error ||
+          "Impossible de créer l'invitation."
+      );
+    }
 
-      const response = await fetch("/api/admin/invite", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          hotel_id: Number(hotelId),
-          full_name: fullName.trim(),
-          email: email.trim().toLowerCase(),
-          role: "admin",
-        }),
-      });
+    // 2. Envoyer un lien sécurisé à l'adresse existante
+    const redirectTo =
+      `${window.location.origin}/?invite=1`;
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          result?.error || "Impossible d'envoyer l'invitation."
-        );
-      }
-
-      setMessage(
-        result?.message ||
-          `Invitation envoyée à ${email.trim().toLowerCase()}.`
+    const { error: resetError } =
+      await supabase.auth.resetPasswordForEmail(
+        normalizedEmail,
+        {
+          redirectTo,
+        }
       );
 
-      setFullName("");
-      setEmail("");
-      setHotelId("");
-
-      await loadData();
-    } catch (err) {
-      setError(err.message || "Une erreur est survenue.");
-    } finally {
-      setSending(false);
+    if (resetError) {
+      throw new Error(
+        "L'invitation a été créée, mais l'e-mail n'a pas pu être envoyé : " +
+          resetError.message
+      );
     }
+
+    setMessage(
+      `Invitation envoyée à ${normalizedEmail}. La personne doit ouvrir l'e-mail et créer son mot de passe.`
+    );
+
+    setFullName("");
+    setEmail("");
+    setHotelId("");
+
+    await loadData();
+  } catch (err) {
+    setError(
+      err.message ||
+        "Une erreur est survenue."
+    );
+  } finally {
+    setSending(false);
   }
 
   function getHotelName(hotelId) {
