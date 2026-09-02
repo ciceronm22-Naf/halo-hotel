@@ -1302,7 +1302,7 @@ function Administrators() {
   } finally {
     setSending(false);
   }
-
+}
   function getHotelName(hotelId) {
     const hotel = hotels.find((item) => String(item.id) === String(hotelId));
     return hotel?.name || "—";
