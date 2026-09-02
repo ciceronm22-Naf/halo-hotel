@@ -316,22 +316,7 @@ if (isInvite) {
     </AuthLayout>
   );
 }
-          />
-
-          {authMessage && <Message text={authMessage} />}
-
-          <button
-            className="primary-button"
-            disabled={authLoading}
-            type="submit"
-          >
-            {authLoading ? "Modification..." : "Modifier le mot de passe"}
-          </button>
-        </form>
-      </AuthLayout>
-    );
-  }
-
+  
   if (!session || !profile) {
     return (
       <AuthLayout>
