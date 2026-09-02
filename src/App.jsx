@@ -111,7 +111,8 @@ function App() {
       }
     }
 const isInvite =
-  window.location.hash.includes("type=invite");
+  window.location.hash.includes("type=invite") ||
+  new URLSearchParams(window.location.search).get("invite") === "1";
 
 if (isInvite) {
   setAuthMode("invite");
