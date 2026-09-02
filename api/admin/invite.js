@@ -157,7 +157,7 @@ export default async function handler(req, res) {
 
     // Envoyer l'invitation Supabase Auth
     const redirectTo =
-  "https://halo-hotel-r8dy26i5d-ciceronm22-naf.vercel.app/";
+  "https://halo-hotel-r8dy26i5d-ciceronm22-naf.vercel.app/?invite=1";
 
     const {
       data: invitedUser,
