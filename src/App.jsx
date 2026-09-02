@@ -258,7 +258,7 @@ if (isInvite) {
   authMode === "reset"
 ) {
   const isInvitation =
-    window.location.hash.includes("type=invite");
+  new URLSearchParams(window.location.search).get("invite") === "1";
 
   return (
     <AuthLayout>
