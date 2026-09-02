@@ -267,9 +267,9 @@ if (isInvite) {
   authMode === "invite"
 ) {
   const isInvitation =
-    window.location.hash.includes("type=invite") ||
-    new URLSearchParams(window.location.search).get("invite") === "1" ||
-    authMode === "invite";
+  window.location.hash.includes("type=invite") ||
+  isInviteUrl ||
+  authMode === "invite";
   
   return (
     <AuthLayout>
