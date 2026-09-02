@@ -248,9 +248,10 @@ function App() {
   }
 
   if (
-    window.location.hash.includes("type=recovery") ||
-    authMode === "reset"
-  ) {
+  window.location.hash.includes("type=recovery") ||
+  window.location.hash.includes("type=invite") ||
+  authMode === "reset"
+){
     return (
       <AuthLayout>
         <AuthHeader />
