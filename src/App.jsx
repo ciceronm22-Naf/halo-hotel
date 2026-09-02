@@ -83,6 +83,8 @@ function App() {
     ? "invite"
     : "login"
 );
+  const isInviteUrl =
+  isInviteUrl;
   const [authLoading, setAuthLoading] = useState(false);
   const [authMessage, setAuthMessage] = useState("");
   const [email, setEmail] = useState("");
