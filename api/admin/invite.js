@@ -156,11 +156,8 @@ export default async function handler(req, res) {
     }
 
     // Envoyer l'invitation Supabase Auth
-    const origin =
-      req.headers.origin ||
-      `https://${req.headers.host}`;
-
-    const redirectTo = `${origin}/`;
+    const redirectTo =
+  "https://halo-hotel-r8dy26i5d-ciceronm22-naf.vercel.app/";
 
     const {
       data: invitedUser,
