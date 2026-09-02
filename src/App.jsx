@@ -106,7 +106,12 @@ function App() {
         setLoading(false);
       }
     }
+const isInvite =
+  window.location.hash.includes("type=invite");
 
+if (isInvite) {
+  setAuthMode("invite");
+}
     init();
 
     const {
