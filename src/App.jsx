@@ -1194,6 +1194,25 @@ function Administrators() {
         .select("*")
         .order("name", { ascending: true }),
     ]);
+    
+    const {
+  data: { session },
+    } = await supabase.auth.getSession();
+
+if (session?.access_token) {
+  const response = await fetch("/api/admin/pending-invitations", {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+    },
+  });
+
+  const result = await response.json();
+
+  if (response.ok) {
+    setPendingInvitations(result.invitations || []);
+  }
+}
 
     if (adminsError) {
       setError(adminsError.message);
