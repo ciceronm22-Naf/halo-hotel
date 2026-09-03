@@ -1,4 +1,5 @@
-     import { createClient } from "@supabase/supabase-js";
+import { createClient } from "@supabase/supabase-js";
+import crypto from "crypto";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -23,7 +24,7 @@ export default async function handler(req, res) {
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // 1. Vérifier l'utilisateur connecté
+    // 1. Vérifier la session
     const {
       data: { user },
       error: userError,
@@ -35,7 +36,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // 2. Vérifier que l'utilisateur est Super-Admin
+    // 2. Vérifier le Super-Admin
     const { data: admin, error: adminError } = await supabase
       .from("admins")
       .select("id, role, status")
@@ -69,8 +70,8 @@ export default async function handler(req, res) {
       });
     }
 
-    const normalizedEmail = email.trim().toLowerCase();
     const hotelId = Number(hotel_id);
+    const normalizedEmail = email.trim().toLowerCase();
 
     // 4. Vérifier l'hôtel
     const { data: hotel, error: hotelError } = await supabase
@@ -97,7 +98,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // 5. Vérifier qu'il n'y a pas déjà un administrateur
+    // 5. Vérifier l'administrateur existant
     const { data: existingAdmin, error: existingAdminError } =
       await supabase
         .from("admins")
@@ -140,12 +141,9 @@ export default async function handler(req, res) {
       });
     }
 
-    // 7. Créer le compte Supabase Auth
-    // Mot de passe temporaire aléatoire.
-    // L'utilisateur devra ensuite définir son propre mot de passe.
+    // 7. Créer le compte Auth
     const temporaryPassword =
-      crypto.randomUUID() +
-      crypto.randomUUID();
+      crypto.randomUUID() + crypto.randomUUID();
 
     const {
       data: authData,
@@ -163,13 +161,24 @@ export default async function handler(req, res) {
 
     if (authError) {
       return res.status(400).json({
-        error: "Impossible de créer le compte utilisateur : " + authError.message,
+        error:
+          "Impossible de créer le compte utilisateur : " +
+          authError.message,
       });
     }
 
     const authUserId = authData.user.id;
 
-    // 8. Créer l'invitation et la relier au compte Auth
+    // 8. Générer un jeton d'invitation sécurisé
+    const invitationToken = crypto.randomBytes(32).toString("hex");
+
+    // On ne stocke jamais le jeton original en base.
+    const tokenHash = crypto
+      .createHash("sha256")
+      .update(invitationToken)
+      .digest("hex");
+
+    // 9. Créer l'invitation
     const {
       data: invitation,
       error: invitationError,
@@ -183,6 +192,8 @@ export default async function handler(req, res) {
         role: "admin",
         auth_user_id: authUserId,
         status: "pending",
+        token_hash: tokenHash,
+        token_version: 1,
       })
       .select(
         "id, hotel_id, email, full_name, role, auth_user_id, status, expires_at"
@@ -190,8 +201,7 @@ export default async function handler(req, res) {
       .single();
 
     if (invitationError) {
-      // Nettoyage : supprimer le compte Auth si l'invitation
-      // n'a pas pu être enregistrée.
+      // Nettoyage si l'invitation n'a pas pu être enregistrée.
       await supabase.auth.admin.deleteUser(authUserId);
 
       return res.status(500).json({
@@ -199,14 +209,17 @@ export default async function handler(req, res) {
       });
     }
 
+    // 10. Pour le moment, on retourne le jeton uniquement
+    // afin de pouvoir tester le mécanisme.
     return res.status(200).json({
       success: true,
-      message: "Invitation et compte utilisateur créés.",
+      message: "Invitation créée avec jeton sécurisé.",
       invitation,
+      invitation_token: invitationToken,
     });
   } catch (error) {
     return res.status(500).json({
       error: "Erreur serveur.",
     });
   }
-} 
+}
