@@ -1615,8 +1615,109 @@ if (session?.access_token) {
               </tbody>
             </table>
           </div>
-        )}
+        {pendingInvitations.length > 0 && (
+  <div
+    style={{
+      marginTop: 20,
+      background: T.card,
+      border: `1px solid ${T.line}`,
+      borderRadius: 16,
+      padding: 18,
+    }}
+  >
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 14,
+      }}
+    >
+      <div>
+        <div
+          style={{
+            fontWeight: 800,
+            color: T.ink,
+            fontSize: 16,
+          }}
+        >
+          Invitations en attente
+        </div>
+
+        <div
+          style={{
+            marginTop: 4,
+            color: T.stone,
+            fontSize: 13,
+          }}
+        >
+          Administrateurs qui n’ont pas encore activé leur compte.
+        </div>
       </div>
+    </div>
+
+    {pendingInvitations.map((invitation) => (
+      <div
+        key={invitation.id}
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 16,
+          padding: "14px 0",
+          borderTop: `1px solid ${T.line}`,
+        }}
+      >
+        <div>
+          <div
+            style={{
+              fontWeight: 700,
+              color: T.ink,
+            }}
+          >
+            {invitation.full_name}
+          </div>
+
+          <div
+            style={{
+              marginTop: 4,
+              color: T.stone,
+              fontSize: 13,
+            }}
+          >
+            {invitation.email}
+          </div>
+
+          <div
+            style={{
+              marginTop: 4,
+              color: T.stone,
+              fontSize: 12,
+            }}
+          >
+            {getHotelName(invitation.hotel_id)}
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => resendInvitation(invitation.id)}
+          style={{
+            border: "none",
+            borderRadius: 10,
+            padding: "10px 14px",
+            background: T.teal,
+            color: "#fff",
+            fontWeight: 800,
+            cursor: "pointer",
+          }}
+        >
+          Renvoyer
+        </button>
+      </div>
+    ))}
+  </div>
+)}
 
       {showInvite && (
         <div
