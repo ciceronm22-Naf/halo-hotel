@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+     import { createClient } from "@supabase/supabase-js";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -23,7 +23,7 @@ export default async function handler(req, res) {
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // Vérifier le Super-Admin connecté
+    // 1. Vérifier l'utilisateur connecté
     const {
       data: { user },
       error: userError,
@@ -35,6 +35,7 @@ export default async function handler(req, res) {
       });
     }
 
+    // 2. Vérifier que l'utilisateur est Super-Admin
     const { data: admin, error: adminError } = await supabase
       .from("admins")
       .select("id, role, status")
@@ -59,8 +60,8 @@ export default async function handler(req, res) {
       });
     }
 
-    // Récupérer les données de l'invitation
-    const { hotel_id, full_name, email, role } = req.body || {};
+    // 3. Récupérer les données
+    const { hotel_id, full_name, email } = req.body || {};
 
     if (!hotel_id || !full_name?.trim() || !email?.trim()) {
       return res.status(400).json({
@@ -68,11 +69,14 @@ export default async function handler(req, res) {
       });
     }
 
-    // Vérifier que l'hôtel existe
+    const normalizedEmail = email.trim().toLowerCase();
+    const hotelId = Number(hotel_id);
+
+    // 4. Vérifier l'hôtel
     const { data: hotel, error: hotelError } = await supabase
       .from("hotels")
       .select("id, name, status")
-      .eq("id", Number(hotel_id))
+      .eq("id", hotelId)
       .maybeSingle();
 
     if (hotelError) {
@@ -93,12 +97,12 @@ export default async function handler(req, res) {
       });
     }
 
-    // Vérifier qu'il n'existe pas déjà un administrateur pour cet hôtel
+    // 5. Vérifier qu'il n'y a pas déjà un administrateur
     const { data: existingAdmin, error: existingAdminError } =
       await supabase
         .from("admins")
         .select("id")
-        .eq("hotel_id", Number(hotel_id))
+        .eq("hotel_id", hotelId)
         .eq("role", "admin")
         .maybeSingle();
 
@@ -114,14 +118,12 @@ export default async function handler(req, res) {
       });
     }
 
-    // Vérifier une invitation déjà en attente
-    const normalizedEmail = email.trim().toLowerCase();
-
+    // 6. Vérifier une invitation déjà en attente
     const { data: pendingInvitation, error: pendingError } =
       await supabase
         .from("admin_invitations")
         .select("id")
-        .eq("hotel_id", Number(hotel_id))
+        .eq("hotel_id", hotelId)
         .eq("email", normalizedEmail)
         .eq("status", "pending")
         .maybeSingle();
@@ -138,22 +140,60 @@ export default async function handler(req, res) {
       });
     }
 
-    // Créer l'invitation
-    const { data: invitation, error: invitationError } =
-      await supabase
-        .from("admin_invitations")
-        .insert({
-          hotel_id: Number(hotel_id),
-          invited_by: admin.id,
-          email: normalizedEmail,
-          full_name: full_name.trim(),
-          role: role === "admin" ? "admin" : "admin",
-          status: "pending",
-        })
-        .select("id, hotel_id, email, full_name, role, status, expires_at")
-        .single();
+    // 7. Créer le compte Supabase Auth
+    // Mot de passe temporaire aléatoire.
+    // L'utilisateur devra ensuite définir son propre mot de passe.
+    const temporaryPassword =
+      crypto.randomUUID() +
+      crypto.randomUUID();
+
+    const {
+      data: authData,
+      error: authError,
+    } = await supabase.auth.admin.createUser({
+      email: normalizedEmail,
+      password: temporaryPassword,
+      email_confirm: false,
+      user_metadata: {
+        full_name: full_name.trim(),
+        hotel_id: hotelId,
+        invited_role: "admin",
+      },
+    });
+
+    if (authError) {
+      return res.status(400).json({
+        error: "Impossible de créer le compte utilisateur : " + authError.message,
+      });
+    }
+
+    const authUserId = authData.user.id;
+
+    // 8. Créer l'invitation et la relier au compte Auth
+    const {
+      data: invitation,
+      error: invitationError,
+    } = await supabase
+      .from("admin_invitations")
+      .insert({
+        hotel_id: hotelId,
+        invited_by: admin.id,
+        email: normalizedEmail,
+        full_name: full_name.trim(),
+        role: "admin",
+        auth_user_id: authUserId,
+        status: "pending",
+      })
+      .select(
+        "id, hotel_id, email, full_name, role, auth_user_id, status, expires_at"
+      )
+      .single();
 
     if (invitationError) {
+      // Nettoyage : supprimer le compte Auth si l'invitation
+      // n'a pas pu être enregistrée.
+      await supabase.auth.admin.deleteUser(authUserId);
+
       return res.status(500).json({
         error: "Impossible d'enregistrer l'invitation.",
       });
@@ -161,7 +201,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       success: true,
-      message: "Invitation enregistrée.",
+      message: "Invitation et compte utilisateur créés.",
       invitation,
     });
   } catch (error) {
@@ -169,4 +209,4 @@ export default async function handler(req, res) {
       error: "Erreur serveur.",
     });
   }
-}
+} 
