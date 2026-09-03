@@ -1,75 +1,25 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  LayoutDashboard,
-  Building2,
-  Receipt,
-  Settings,
-  LogOut,
-  Menu,
-  X,
-  Users,
-  Plus,
-  Search,
-  RefreshCw,
-  Shield,
-  AlertCircle,
-  CheckCircle2,
-  XCircle,
-  Mail,
-  Phone,
-  MapPin,
-  Eye,
-  EyeOff,
-  Lock,
+  LayoutDashboard, Building2, Receipt, Settings, LogOut, Menu, X, Users,
+  Plus, Search, RefreshCw, Shield, AlertCircle, CheckCircle2, XCircle,
+  Mail, Phone, MapPin, Eye, EyeOff, Lock
 } from "lucide-react";
 import { supabase } from "./supabase";
 
 const T = {
-  ink: "#1B2430",
-  inkSoft: "#2A3444",
-  paper: "#F6F4EF",
-  card: "#FFFFFF",
-  line: "#E6E2D8",
-  stone: "#8A8578",
-  teal: "#2F6F62",
-  tealLight: "#DCEAE6",
-  tealDeep: "#1F4B41",
-  clay: "#C1622C",
-  clayLight: "#F3E0D3",
-  sage: "#7A8C6E",
-  sageLight: "#E6EBDF",
-  amber: "#D9A441",
-  amberLight: "#F7ECD6",
-  red: "#B4463D",
-  redLight: "#F3DEDB",
+  ink: "#1B2430", inkSoft: "#2A3444", paper: "#F6F4EF", card: "#FFFFFF",
+  line: "#E6E2D8", stone: "#8A8578", teal: "#2F6F62", tealLight: "#DCEAE6",
+  tealDeep: "#1F4B41", clay: "#C1622C", clayLight: "#F3E0D3", sage: "#7A8C6E",
+  sageLight: "#E6EBDF", amber: "#D9A441", amberLight: "#F7ECD6", red: "#B4463D",
+  redLight: "#F3DEDB"
 };
 
 const menuItems = [
-  {
-    key: "dashboard",
-    label: "Tableau de bord",
-    icon: LayoutDashboard,
-  },
-  {
-    key: "establishments",
-    label: "Établissements",
-    icon: Building2,
-  },
-  {
-    key: "billing",
-    label: "Facturation",
-    icon: Receipt,
-  },
-  {
-    key: "administrators",
-    label: "Administrateurs",
-    icon: Users,
-  },
-  {
-    key: "settings",
-    label: "Réglages",
-    icon: Settings,
-  },
+  { key: "dashboard", label: "Tableau de bord", icon: LayoutDashboard },
+  { key: "establishments", label: "Établissements", icon: Building2 },
+  { key: "billing", label: "Facturation", icon: Receipt },
+  { key: "administrators", label: "Administrateurs", icon: Users },
+  { key: "settings", label: "Réglages", icon: Settings }
 ];
 
 function App() {
@@ -79,28 +29,23 @@ function App() {
   const [page, setPage] = useState("dashboard");
   const [mobileMenu, setMobileMenu] = useState(false);
   const [authMode, setAuthMode] = useState(
-  new URLSearchParams(window.location.search).get("invite") === "1"
-    ? "invite"
-    : "login"
-);
-  const isInviteUrl =
-  new URLSearchParams(window.location.search).get("invite") === "1";
+    new URLSearchParams(window.location.search).get("invite") === "1" ? "invite" : "login"
+  );
+  const isInviteUrl = new URLSearchParams(window.location.search).get("invite") === "1";
   const [authLoading, setAuthLoading] = useState(false);
   const [authMessage, setAuthMessage] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-
   const isSuperAdmin = profile?.role === "super_admin";
 
   useEffect(() => {
     let mounted = true;
 
     async function init() {
-      const {
-        data: { session: currentSession },
-      } = await supabase.auth.getSession();
+      const { data: { session: currentSession } } =
+        await supabase.auth.getSession();
 
       if (!mounted) return;
 
@@ -112,27 +57,25 @@ function App() {
         setLoading(false);
       }
     }
-const isInvite =
-  window.location.hash.includes("type=invite") ||
-  new URLSearchParams(window.location.search).get("invite") === "1";
 
-if (isInvite) {
-  setAuthMode("invite");
-}
+    const isInvite =
+      window.location.hash.includes("type=invite") || isInviteUrl;
+
+    if (isInvite) setAuthMode("invite");
+
     init();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
-      setSession(newSession);
+    const { data: { subscription } } =
+      supabase.auth.onAuthStateChange(async (_event, newSession) => {
+        setSession(newSession);
 
-      if (newSession?.user) {
-        await loadProfile(newSession.user.id);
-      } else {
-        setProfile(null);
-        setLoading(false);
-      }
-    });
+        if (newSession?.user) {
+          await loadProfile(newSession.user.id);
+        } else {
+          setProfile(null);
+          setLoading(false);
+        }
+      });
 
     return () => {
       mounted = false;
@@ -149,14 +92,8 @@ if (isInvite) {
       .eq("auth_user_id", userId)
       .maybeSingle();
 
-    if (error) {
-      console.error(error);
-      setProfile(null);
-      setLoading(false);
-      return;
-    }
-
-    if (!data || data.status !== "active") {
+    if (error || !data || data.status !== "active") {
+      if (error) console.error(error);
       setProfile(null);
       setLoading(false);
       return;
@@ -174,18 +111,15 @@ if (isInvite) {
 
   async function handleLogin(event) {
     event.preventDefault();
-
     setAuthLoading(true);
     setAuthMessage("");
 
     const { error } = await supabase.auth.signInWithPassword({
       email: email.trim(),
-      password,
+      password
     });
 
-    if (error) {
-      setAuthMessage(error.message);
-    }
+    if (error) setAuthMessage(error.message);
 
     setAuthLoading(false);
   }
@@ -201,20 +135,16 @@ if (isInvite) {
     setAuthLoading(true);
     setAuthMessage("");
 
-    const { error } = await supabase.auth.resetPasswordForEmail(
-      email.trim(),
-      {
-        redirectTo: window.location.origin,
-      }
-    );
+    const { error } =
+      await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: window.location.origin
+      });
 
-    if (error) {
-      setAuthMessage(error.message);
-    } else {
-      setAuthMessage(
-        "Si cette adresse existe, un email de réinitialisation a été envoyé."
-      );
-    }
+    setAuthMessage(
+      error
+        ? error.message
+        : "Si cette adresse existe, un email de réinitialisation a été envoyé."
+    );
 
     setAuthLoading(false);
   }
@@ -233,13 +163,15 @@ if (isInvite) {
     setAuthMessage("");
 
     const { error } = await supabase.auth.updateUser({
-      password: newPassword,
+      password: newPassword
     });
 
     if (error) {
       setAuthMessage(error.message);
     } else {
-      setAuthMessage("Votre mot de passe a été modifié. Vous pouvez vous connecter.");
+      setAuthMessage(
+        "Votre mot de passe a été modifié. Vous pouvez vous connecter."
+      );
       setAuthMode("login");
       setPassword("");
       setNewPassword("");
@@ -255,79 +187,73 @@ if (isInvite) {
     setPage("dashboard");
   }
 
-  if (loading) {
-    return <LoadingScreen />;
+  if (loading) return <LoadingScreen />;  
+  
+  if (
+    window.location.hash.includes("type=recovery") ||
+    window.location.hash.includes("type=invite") ||
+    isInviteUrl ||
+    authMode === "reset" ||
+    authMode === "invite"
+  ) {
+    const isInvitation =
+      window.location.hash.includes("type=invite") ||
+      isInviteUrl ||
+      authMode === "invite";
+
+    return (
+      <AuthLayout>
+        <AuthHeader />
+
+        <form onSubmit={handleResetPassword}>
+          <h1>
+            {isInvitation
+              ? "Bienvenue sur Hôtel Halo"
+              : "Réinitialiser le mot de passe"}
+          </h1>
+
+          <p className="auth-subtitle">
+            {isInvitation
+              ? "Créez votre mot de passe pour activer votre compte administrateur."
+              : "Choisissez un nouveau mot de passe sécurisé."}
+          </p>
+
+          <Field
+            label="Nouveau mot de passe"
+            type={showPassword ? "text" : "password"}
+            value={newPassword}
+            onChange={setNewPassword}
+            placeholder="Au moins 8 caractères"
+            icon={Lock}
+            right={
+              <button
+                type="button"
+                className="icon-button"
+                onClick={() => setShowPassword(v => !v)}
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            }
+          />
+
+          {authMessage && <Message text={authMessage} />}
+
+          <button
+            className="primary-button"
+            disabled={authLoading}
+            type="submit"
+          >
+            {authLoading
+              ? "Activation..."
+              : isInvitation
+              ? "Créer mon mot de passe"
+              : "Modifier le mot de passe"}
+          </button>
+        </form>
+      </AuthLayout>
+    );
   }
 
-  if (
-  window.location.hash.includes("type=recovery") ||
-  window.location.hash.includes("type=invite") ||
-  new URLSearchParams(window.location.search).get("invite") === "1" ||
-  authMode === "reset" ||
-  authMode === "invite"
-) {
-  const isInvitation =
-  window.location.hash.includes("type=invite") ||
-  isInviteUrl ||
-  authMode === "invite";
-  
-  return (
-    <AuthLayout>
-      <AuthHeader />
-
-      <form onSubmit={handleResetPassword}>
-        <h1>
-          {isInvitation
-            ? "Bienvenue sur Hôtel Halo"
-            : "Réinitialiser le mot de passe"}
-        </h1>
-
-        <p className="auth-subtitle">
-          {isInvitation
-            ? "Créez votre mot de passe pour activer votre compte administrateur."
-            : "Choisissez un nouveau mot de passe sécurisé."}
-        </p>
-
-        <Field
-          label="Nouveau mot de passe"
-          type={showPassword ? "text" : "password"}
-          value={newPassword}
-          onChange={setNewPassword}
-          placeholder="Au moins 8 caractères"
-          icon={Lock}
-          right={
-            <button
-              type="button"
-              className="icon-button"
-              onClick={() => setShowPassword((v) => !v)}
-            >
-              {showPassword ? (
-                <EyeOff size={20} />
-              ) : (
-                <Eye size={20} />
-              )}
-            </button>
-          }
-        />
-
-        {authMessage && <Message text={authMessage} />}
-
-        <button
-          className="primary-button"
-          disabled={authLoading}
-          type="submit"
-        >
-          {authLoading
-            ? "Activation..."
-            : isInvitation
-            ? "Créer mon mot de passe"
-            : "Modifier le mot de passe"}
-        </button>
-      </form>
-    </AuthLayout>
-  );
-}
-  
   if (!session || !profile) {
     return (
       <AuthLayout>
@@ -336,6 +262,7 @@ if (isInvite) {
         {authMode === "login" && (
           <form onSubmit={handleLogin}>
             <h1>Bienvenue sur Hôtel Halo</h1>
+
             <p className="auth-subtitle">
               Connectez-vous à votre espace de gestion.
             </p>
@@ -360,9 +287,13 @@ if (isInvite) {
                 <button
                   type="button"
                   className="icon-button"
-                  onClick={() => setShowPassword((v) => !v)}
+                  onClick={() => setShowPassword(v => !v)}
                 >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  {showPassword ? (
+                    <EyeOff size={20} />
+                  ) : (
+                    <Eye size={20} />
+                  )}
                 </button>
               }
             />
@@ -393,6 +324,7 @@ if (isInvite) {
         {authMode === "forgot" && (
           <form onSubmit={handleForgotPassword}>
             <h1>Mot de passe oublié ?</h1>
+
             <p className="auth-subtitle">
               Entrez votre adresse email pour recevoir un lien sécurisé.
             </p>
@@ -443,8 +375,6 @@ if (isInvite) {
 
   return (
     <div className="app-shell">
-      <style>{globalStyles}</style>
-
       {mobileMenu && (
         <div
           className="mobile-overlay"
@@ -454,7 +384,7 @@ if (isInvite) {
 
       <Sidebar
         page={page}
-        setPage={(value) => {
+        setPage={value => {
           setPage(value);
           setMobileMenu(false);
         }}
@@ -475,6 +405,7 @@ if (isInvite) {
             <div className="topbar-title">
               {pageTitle(page)}
             </div>
+
             <div className="topbar-subtitle">
               Administration de la plateforme
             </div>
@@ -484,6 +415,7 @@ if (isInvite) {
             <div className="avatar">
               {(profile.full_name || "S").charAt(0).toUpperCase()}
             </div>
+
             <div className="topbar-user-info">
               <strong>{profile.full_name}</strong>
               <span>Super-Admin</span>
@@ -501,20 +433,12 @@ if (isInvite) {
       </main>
     </div>
   );
-}
-
-/* =========================================================
-   AUTH
-========================================================= */
+      }
 
 function AuthLayout({ children }) {
   return (
     <div className="auth-page">
-      <style>{globalStyles}</style>
-
-      <div className="auth-card">
-        {children}
-      </div>
+      <div className="auth-card">{children}</div>
     </div>
   );
 }
@@ -523,7 +447,6 @@ function AuthHeader() {
   return (
     <div className="auth-brand">
       <div className="brand-logo">H</div>
-
       <div>
         <strong>Hôtel Halo</strong>
         <span>Gestion hôtelière</span>
@@ -566,8 +489,8 @@ function Field({
 
 function Message({ text }) {
   return (
-    <div className="message error">
-      <AlertCircle size={20} />
+    <div className="message">
+      <AlertCircle size={19} />
       <span>{text}</span>
     </div>
   );
@@ -576,27 +499,20 @@ function Message({ text }) {
 function LoadingScreen() {
   return (
     <div className="loading-screen">
-      <style>{globalStyles}</style>
-      <div className="loading-spinner" />
       <strong>Hôtel Halo</strong>
       <span>Chargement sécurisé...</span>
     </div>
   );
 }
 
-/* =========================================================
-   SIDEBAR
-========================================================= */
-
-function Sidebar({
-  page,
-  setPage,
-  onLogout,
-  mobileMenu,
-}) {
+function Sidebar({ page, setPage, onLogout, mobileMenu }) {
   return (
-    <aside className={`sidebar ${mobileMenu ? "sidebar-open" : ""}`}>
-      <div className="sidebar-header">
+    <aside
+      className={`sidebar ${
+        mobileMenu ? "sidebar-open" : ""
+      }`}
+    >
+      <div className="sidebar-brand">
         <div className="brand-logo">H</div>
 
         <div className="brand-text">
@@ -621,12 +537,13 @@ function Sidebar({
       <nav className="sidebar-nav">
         {menuItems.map((item) => {
           const Icon = item.icon;
-          const active = page === item.key;
 
           return (
             <button
               key={item.key}
-              className={`nav-item ${active ? "active" : ""}`}
+              className={`nav-item ${
+                page === item.key ? "active" : ""
+              }`}
               onClick={() => setPage(item.key)}
             >
               <Icon size={23} />
@@ -639,13 +556,17 @@ function Sidebar({
       <div className="sidebar-bottom">
         <div className="security-box">
           <Shield size={20} />
+
           <div>
             <strong>Accès sécurisé</strong>
             <span>Compte Super-Admin</span>
           </div>
         </div>
 
-        <button className="logout-button" onClick={onLogout}>
+        <button
+          className="logout-button"
+          onClick={onLogout}
+        >
           <LogOut size={20} />
           Déconnexion
         </button>
@@ -653,10 +574,6 @@ function Sidebar({
     </aside>
   );
 }
-
-/* =========================================================
-   DASHBOARD
-========================================================= */
 
 function SuperAdminDashboard() {
   const [hotels, setHotels] = useState([]);
@@ -668,7 +585,9 @@ function SuperAdminDashboard() {
     const { data, error } = await supabase
       .from("hotels")
       .select("*")
-      .order("created_at", { ascending: false });
+      .order("created_at", {
+        ascending: false,
+      });
 
     if (error) {
       console.error(error);
@@ -689,12 +608,6 @@ function SuperAdminDashboard() {
 
   return (
     <>
-      <PageIntro
-        eyebrow="SUPER-ADMIN"
-        title="Vue d'ensemble"
-        description="Pilotez les établissements et les services d'Hôtel Halo."
-      />
-
       <div className="kpi-grid">
         <KpiCard
           icon={Building2}
@@ -726,7 +639,10 @@ function SuperAdminDashboard() {
         <div className="panel-header">
           <div>
             <h2>Établissements récents</h2>
-            <p>Les derniers hôtels enregistrés sur la plateforme.</p>
+            <p>
+              Les derniers hôtels enregistrés sur la
+              plateforme.
+            </p>
           </div>
 
           <button
@@ -750,17 +666,30 @@ function SuperAdminDashboard() {
       </section>
     </>
   );
-}
+        }
 
-/* =========================================================
-   ESTABLISHMENTS
-========================================================= */
+function KpiCard({ icon: Icon, label, value, small }) {
+  return (
+    <div className="kpi-card">
+      <div className="kpi-icon">
+        <Icon size={23} />
+      </div>
+
+      <div className="kpi-content">
+        <span>{label}</span>
+        <strong className={small ? "small-value" : ""}>
+          {value}
+        </strong>
+      </div>
+    </div>
+  );
+}
 
 function Establishments() {
   const [hotels, setHotels] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showCreate, setShowCreate] = useState(false);
   const [search, setSearch] = useState("");
-  const [showModal, setShowModal] = useState(false);
 
   async function loadHotels() {
     setLoading(true);
@@ -768,11 +697,12 @@ function Establishments() {
     const { data, error } = await supabase
       .from("hotels")
       .select("*")
-      .order("created_at", { ascending: false });
+      .order("created_at", {
+        ascending: false,
+      });
 
     if (error) {
       console.error(error);
-      alert("Impossible de charger les établissements.");
     } else {
       setHotels(data || []);
     }
@@ -784,151 +714,90 @@ function Establishments() {
     loadHotels();
   }, []);
 
-  const filteredHotels = useMemo(() => {
-    const value = search.toLowerCase().trim();
+  const filteredHotels = hotels.filter((hotel) => {
+    const text = `${hotel.name || ""} ${
+      hotel.email || ""
+    } ${hotel.phone || ""}`.toLowerCase();
 
-    if (!value) return hotels;
-
-    return hotels.filter((hotel) =>
-      [
-        hotel.name,
-        hotel.email,
-        hotel.phone,
-        hotel.address,
-      ]
-        .filter(Boolean)
-        .some((field) =>
-          String(field).toLowerCase().includes(value)
-        )
-    );
-  }, [hotels, search]);
-
-  async function createHotel(form) {
-    const { data, error } = await supabase
-      .from("hotels")
-      .insert({
-        name: form.name.trim(),
-        email: form.email.trim() || null,
-        phone: form.phone.trim() || null,
-        address: form.address.trim() || null,
-        status: form.status,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error(error);
-      throw new Error(
-        error.message || "Impossible de créer l'établissement."
-      );
-    }
-
-    setHotels((current) => [data, ...current]);
-    setShowModal(false);
-  }
+    return text.includes(search.toLowerCase());
+  });
 
   return (
     <>
       <PageIntro
-        eyebrow="PLATEFORME"
         title="Établissements"
-        description="Gérez les hôtels enregistrés sur Hôtel Halo."
+        subtitle="Gérez les hôtels présents sur la plateforme Hôtel Halo."
         action={
           <button
-            className="primary-small-button"
-            onClick={() => setShowModal(true)}
+            className="primary-button"
+            onClick={() => setShowCreate(true)}
           >
             <Plus size={19} />
-            Ajouter un établissement
+            Nouvel établissement
           </button>
         }
       />
 
       <section className="panel">
-        <div className="panel-header">
-          <div>
-            <h2>{hotels.length} établissement(s)</h2>
-            <p>
-              Créez et consultez les établissements de votre plateforme.
-            </p>
+        <div className="toolbar">
+          <div className="search-box">
+            <Search size={19} />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Rechercher un établissement..."
+            />
           </div>
 
           <button
             className="secondary-button"
             onClick={loadHotels}
-            disabled={loading}
           >
             <RefreshCw size={18} />
             Actualiser
           </button>
         </div>
 
-        <div className="search-box">
-          <Search size={21} />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Rechercher un établissement..."
-          />
-        </div>
-
         {loading ? (
-          <div className="inline-loading">
-            <div className="loading-spinner small" />
-            Chargement...
+          <div className="empty-state">
+            <strong>Chargement...</strong>
           </div>
         ) : filteredHotels.length === 0 ? (
           <EmptyState
             icon={Building2}
-            title="Aucun résultat"
-            text={
-              hotels.length === 0
-                ? "Aucun établissement n'est encore enregistré."
-                : "Aucun établissement ne correspond à votre recherche."
-            }
+            title="Aucun établissement"
+            text="Aucun hôtel ne correspond à votre recherche."
           />
         ) : (
           <HotelTable hotels={filteredHotels} />
         )}
       </section>
 
-      {showModal && (
+      {showCreate && (
         <CreateHotelModal
-          onClose={() => setShowModal(false)}
-          onCreate={createHotel}
+          onClose={() => setShowCreate(false)}
+          onCreated={async () => {
+            setShowCreate(false);
+            await loadHotels();
+          }}
         />
       )}
     </>
   );
 }
 
-/* =========================================================
-   CREATE HOTEL MODAL
-========================================================= */
-
-function CreateHotelModal({ onClose, onCreate }) {
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    address: "",
-    status: "active",
-  });
-
+function CreateHotelModal({ onClose, onCreated }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  function update(field, value) {
-    setForm((current) => ({
-      ...current,
-      [field]: value,
-    }));
-  }
-
-  async function submit(event) {
+  async function createHotel(event) {
     event.preventDefault();
 
-    if (!form.name.trim()) {
+    if (!name.trim()) {
       setError("Le nom de l'établissement est obligatoire.");
       return;
     }
@@ -936,150 +805,106 @@ function CreateHotelModal({ onClose, onCreate }) {
     setSaving(true);
     setError("");
 
-    try {
-      await onCreate(form);
-    } catch (err) {
-      setError(err.message);
+    const { error: insertError } = await supabase
+      .from("hotels")
+      .insert({
+        name: name.trim(),
+        email: email.trim() || null,
+        phone: phone.trim() || null,
+        address: address.trim() || null,
+        status: "active",
+      });
+
+    if (insertError) {
+      setError(insertError.message);
+      setSaving(false);
+      return;
     }
 
-    setSaving(false);
+    await onCreated();
   }
 
   return (
-    <div className="modal-backdrop">
-      <div className="modal">
-        <div className="modal-header">
-          <div>
-            <div className="modal-icon">
-              <Building2 size={24} />
-            </div>
+    <Modal title="Nouvel établissement" onClose={onClose}>
+      <form onSubmit={createHotel}>
+        <Field
+          label="Nom de l'établissement"
+          type="text"
+          value={name}
+          onChange={setName}
+          placeholder="Ex. Hôtel Fleuve Congo"
+          icon={Building2}
+        />
 
-            <h2>Ajouter un établissement</h2>
-            <p>
-              Enregistrez un nouvel hôtel sur Hôtel Halo.
-            </p>
+        <Field
+          label="Email"
+          type="email"
+          value={email}
+          onChange={setEmail}
+          placeholder="contact@hotel.com"
+          icon={Mail}
+        />
+
+        <Field
+          label="Téléphone"
+          type="tel"
+          value={phone}
+          onChange={setPhone}
+          placeholder="+243 ..."
+          icon={Phone}
+        />
+
+        <div className="field">
+          <label>Adresse</label>
+
+          <div className="input-wrapper">
+            <MapPin
+              size={22}
+              className="input-icon"
+            />
+
+            <input
+              type="text"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="Adresse de l'établissement"
+            />
           </div>
-
-          <button
-            className="modal-close"
-            onClick={onClose}
-            type="button"
-          >
-            <X size={22} />
-          </button>
         </div>
 
-        <form onSubmit={submit}>
-          <div className="form-grid">
-            <div className="field">
-              <label>Nom de l'établissement *</label>
-              <input
-                value={form.name}
-                onChange={(e) => update("name", e.target.value)}
-                placeholder="Ex. Hôtel Fleuve Congo"
-                autoFocus
-              />
-            </div>
+        {error && <Message text={error} />}
 
-            <div className="field">
-              <label>Email</label>
-              <div className="simple-input-icon">
-                <Mail size={19} />
-                <input
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => update("email", e.target.value)}
-                  placeholder="contact@hotel.com"
-                />
-              </div>
-            </div>
+        <div className="modal-actions">
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={onClose}
+          >
+            Annuler
+          </button>
 
-            <div className="field">
-              <label>Téléphone</label>
-              <div className="simple-input-icon">
-                <Phone size={19} />
-                <input
-                  value={form.phone}
-                  onChange={(e) => update("phone", e.target.value)}
-                  placeholder="+243 ..."
-                />
-              </div>
-            </div>
-
-            <div className="field">
-              <label>Statut</label>
-              <select
-                value={form.status}
-                onChange={(e) => update("status", e.target.value)}
-              >
-                <option value="active">Actif</option>
-                <option value="suspended">Suspendu</option>
-              </select>
-            </div>
-
-            <div className="field full">
-              <label>Adresse</label>
-              <div className="simple-input-icon">
-                <MapPin size={19} />
-                <input
-                  value={form.address}
-                  onChange={(e) => update("address", e.target.value)}
-                  placeholder="Adresse de l'établissement"
-                />
-              </div>
-            </div>
-          </div>
-
-          {error && (
-            <div className="message error modal-error">
-              <AlertCircle size={20} />
-              <span>{error}</span>
-            </div>
-          )}
-
-          <div className="modal-actions">
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={onClose}
-              disabled={saving}
-            >
-              Annuler
-            </button>
-
-            <button
-              type="submit"
-              className="primary-small-button"
-              disabled={saving}
-            >
-              {saving ? (
-                "Enregistrement..."
-              ) : (
-                <>
-                  <Plus size={19} />
-                  Créer l'établissement
-                </>
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+          <button
+            type="submit"
+            className="primary-button"
+            disabled={saving}
+          >
+            {saving ? "Création..." : "Créer l'établissement"}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }
-
-/* =========================================================
-   HOTEL TABLE
-========================================================= */
 
 function HotelTable({ hotels }) {
   return (
     <div className="table-wrapper">
-      <table>
+      <table className="data-table">
         <thead>
           <tr>
             <th>Établissement</th>
-            <th>Contact</th>
+            <th>Email</th>
+            <th>Téléphone</th>
             <th>Statut</th>
             <th>Créé le</th>
           </tr>
@@ -1089,9 +914,9 @@ function HotelTable({ hotels }) {
           {hotels.map((hotel) => (
             <tr key={hotel.id}>
               <td>
-                <div className="hotel-name-cell">
-                  <div className="table-icon">
-                    <Building2 size={20} />
+                <div className="table-primary">
+                  <div className="table-avatar">
+                    <Building2 size={18} />
                   </div>
 
                   <div>
@@ -1103,28 +928,20 @@ function HotelTable({ hotels }) {
                 </div>
               </td>
 
-              <td>
-                <div className="contact-cell">
-                  {hotel.email && (
-                    <span>{hotel.email}</span>
-                  )}
+              <td>{hotel.email || "—"}</td>
 
-                  {hotel.phone && (
-                    <span>{hotel.phone}</span>
-                  )}
-
-                  {!hotel.email && !hotel.phone && (
-                    <span>—</span>
-                  )}
-                </div>
-              </td>
+              <td>{hotel.phone || "—"}</td>
 
               <td>
                 <StatusBadge status={hotel.status} />
               </td>
 
               <td>
-                {formatDate(hotel.created_at)}
+                {hotel.created_at
+                  ? new Date(
+                      hotel.created_at
+                    ).toLocaleDateString("fr-FR")
+                  : "—"}
               </td>
             </tr>
           ))}
@@ -1132,907 +949,721 @@ function HotelTable({ hotels }) {
       </table>
     </div>
   );
-}
-
-function StatusBadge({ status }) {
-  const active = status === "active";
-
-  return (
-    <span
-      className={`status-badge ${
-        active ? "status-active" : "status-suspended"
-      }`}
-    >
-      {active ? (
-        <CheckCircle2 size={15} />
-      ) : (
-        <XCircle size={15} />
-      )}
-
-      {active ? "Actif" : "Suspendu"}
-    </span>
-  );
-}
-
-/* =========================================================
-   ADMINISTRATORS
-========================================================= */
+      }
 
 function Administrators() {
-  const [admins, setAdmins] = useState([]);
   const [hotels, setHotels] = useState([]);
+  const [admins, setAdmins] = useState([]);
+  const [invitations, setInvitations] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showInvite, setShowInvite] = useState(false);
 
   const [hotelId, setHotelId] = useState("");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [pendingInvitations, setPendingInvitations] = useState([]);
-  
+
+  async function loadData() {
+    setLoading(true);
+
+    const [
+      hotelsResult,
+      adminsResult,
+    ] = await Promise.all([
+      supabase
+        .from("hotels")
+        .select("*")
+        .order("name"),
+
+      supabase
+        .from("admins")
+        .select("*")
+        .in("role", ["admin", "super_admin"])
+        .order("created_at", {
+          ascending: false,
+        }),
+    ]);
+
+    if (hotelsResult.error) {
+      console.error(hotelsResult.error);
+    } else {
+      setHotels(hotelsResult.data || []);
+    }
+
+    if (adminsResult.error) {
+      console.error(adminsResult.error);
+    } else {
+      setAdmins(adminsResult.data || []);
+    }
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session?.access_token) {
+        const response = await fetch(
+          "/api/admin/pending-invitations",
+          {
+            headers: {
+              Authorization:
+                `Bearer ${session.access_token}`,
+            },
+          }
+        );
+
+        const result = await response.json();
+
+        if (response.ok) {
+          setInvitations(
+            result.invitations || []
+          );
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    }
+
+    setLoading(false);
+  }
+
   useEffect(() => {
     loadData();
   }, []);
 
-  async function loadData() {
-    setLoading(true);
-    setError("");
+  async function sendInvitation(event) {
+    event.preventDefault();
 
-    const [
-      { data: adminsData, error: adminsError },
-      { data: hotelsData, error: hotelsError },
-    ] = await Promise.all([
-      supabase
-        .from("admins")
-        .select("*")
-        .order("created_at", { ascending: false }),
-
-      supabase
-        .from("hotels")
-        .select("*")
-        .order("name", { ascending: true }),
-    ]);
-    
-    const {
-  data: { session },
-    } = await supabase.auth.getSession();
-
-if (session?.access_token) {
-  const response = await fetch("/api/admin/pending-invitations", {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-    },
-  });
-
-  const result = await response.json();
-
-  if (response.ok) {
-    setPendingInvitations(result.invitations || []);
-  }
-}
-
-    if (adminsError) {
-      setError(adminsError.message);
-    }
-
-    if (hotelsError) {
-      setError(hotelsError.message);
-    }
-
-    setAdmins(adminsData || []);
-    setHotels(hotelsData || []);
-    setLoading(false);
-  }
-
-  function openInvite() {
-    setHotelId("");
-    setFullName("");
-    setEmail("");
     setMessage("");
     setError("");
-    setShowInvite(true);
-  }
 
-  async function sendInvitation(e) {
-  e.preventDefault();
-
-  setMessage("");
-  setError("");
-
-  if (!hotelId || !fullName.trim() || !email.trim()) {
-    setError("Tous les champs sont obligatoires.");
-    return;
-  }
-
-  setSending(true);
-
-  try {
-    const normalizedEmail = email.trim().toLowerCase();
-
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session?.access_token) {
-      throw new Error("Votre session Super-Admin est invalide.");
-    }
-
-    const response = await fetch("/api/admin/invite", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({
-        hotel_id: Number(hotelId),
-        full_name: fullName.trim(),
-        email: normalizedEmail,
-        role: "admin",
-      }),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        result?.error || "Impossible de créer l'invitation."
+    if (
+      !hotelId ||
+      !fullName.trim() ||
+      !email.trim()
+    ) {
+      setError(
+        "Tous les champs sont obligatoires."
       );
+      return;
     }
 
-    if (!result?.invitation_token) {
-      throw new Error(
-        "L'invitation a été créée, mais aucun jeton d'activation n'a été reçu."
+    setSending(true);
+
+    try {
+      const normalizedEmail =
+        email.trim().toLowerCase();
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.access_token) {
+        throw new Error(
+          "Votre session Super-Admin est invalide."
+        );
+      }
+
+      const response = await fetch(
+        "/api/admin/invite",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type": "application/json",
+            Authorization:
+              `Bearer ${session.access_token}`,
+          },
+
+          body: JSON.stringify({
+            hotel_id: Number(hotelId),
+            full_name: fullName.trim(),
+            email: normalizedEmail,
+            role: "admin",
+          }),
+        }
       );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result?.error ||
+            "Impossible de créer l'invitation."
+        );
+      }
+
+      if (!result?.invitation_token) {
+        throw new Error(
+          "L'invitation a été créée, mais aucun jeton d'activation n'a été reçu."
+        );
+      }
+
+      const activationUrl =
+        `${window.location.origin}/?invite=1&token=` +
+        `${encodeURIComponent(
+          result.invitation_token
+        )}`;
+
+      setMessage(
+        `Invitation créée pour ${normalizedEmail}. ` +
+        `Le lien d'activation est prêt.`
+      );
+
+      console.log(
+        "Lien d'activation de test :",
+        activationUrl
+      );
+
+      setFullName("");
+      setEmail("");
+      setHotelId("");
+
+      await loadData();
+    } catch (err) {
+      setError(
+        err.message ||
+          "Une erreur est survenue."
+      );
+    } finally {
+      setSending(false);
     }
-
-    const activationUrl =
-      `${window.location.origin}/?invite=1&token=${encodeURIComponent(
-        result.invitation_token
-      )}`;
-
-    setMessage(
-      `Invitation créée pour ${normalizedEmail}. ` +
-      `Le lien d'activation est prêt.`
-    );
-
-    console.log("Lien d'activation de test :", activationUrl);
-
-    setFullName("");
-    setEmail("");
-    setHotelId("");
-
-    await loadData();
-  } catch (err) {
-    setError(
-      err.message || "Une erreur est survenue."
-    );
-  } finally {
-    setSending(false);
   }
-}
+
   async function resendInvitation(invitationId) {
-  setMessage("");
-  setError("");
+    setMessage("");
+    setError("");
 
-  try {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-    if (!session?.access_token) {
-      throw new Error("Votre session Super-Admin est invalide.");
-    }
+      if (!session?.access_token) {
+        throw new Error(
+          "Votre session Super-Admin est invalide."
+        );
+      }
 
-    const response = await fetch("/api/admin/resend-invitation", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({
-        invitation_id: Number(invitationId),
-      }),
-    });
+      const response = await fetch(
+        "/api/admin/resend-invitation",
+        {
+          method: "POST",
 
-    const result = await response.json();
+          headers: {
+            "Content-Type": "application/json",
+            Authorization:
+              `Bearer ${session.access_token}`,
+          },
 
-    if (!response.ok) {
-      throw new Error(
-        result?.error || "Impossible de renouveler l'invitation."
+          body: JSON.stringify({
+            invitation_id: invitationId,
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result?.error ||
+            "Impossible de renvoyer l'invitation."
+        );
+      }
+
+      if (!result?.invitation_token) {
+        throw new Error(
+          "Le nouveau lien d'invitation n'a pas été reçu."
+        );
+      }
+
+      const activationUrl =
+        `${window.location.origin}/?invite=1&token=` +
+        `${encodeURIComponent(
+          result.invitation_token
+        )}`;
+
+      console.log(
+        "Nouveau lien d'activation de test :",
+        activationUrl
+      );
+
+      setMessage(
+        "Un nouveau lien d'activation a été généré. " +
+        "Consultez la console du navigateur pour le test."
+      );
+
+      await loadData();
+    } catch (err) {
+      setError(
+        err.message ||
+          "Une erreur est survenue."
       );
     }
+  }
 
-    const activationUrl =
-      `${window.location.origin}/?invite=1&token=${encodeURIComponent(
-        result.invitation_token
-      )}`;
-
-    setMessage(`Invitation renouvelée pour ${result.email}.`);
-
-    console.log("Nouveau lien d'activation :", activationUrl);
-  } catch (err) {
-    setError(
-      err.message || "Une erreur est survenue."
+  function getHotelName(id) {
+    const hotel = hotels.find(
+      (item) =>
+        String(item.id) === String(id)
     );
-  }
-  }
-  function getHotelName(hotelId) {
-    const hotel = hotels.find((item) => String(item.id) === String(hotelId));
+
     return hotel?.name || "—";
   }
 
   const administrators = admins.filter(
-    (admin) => admin.role === "admin" || admin.role === "super_admin"
+    (admin) =>
+      admin.role === "admin" ||
+      admin.role === "super_admin"
   );
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 16,
-          flexWrap: "wrap",
-        }}
-      >
-        <div>
-          <h1
-            style={{
-              margin: 0,
-              color: T.ink,
-              fontSize: 30,
-              fontWeight: 800,
-            }}
-          >
-            Administrateurs
-          </h1>
+    <>
+      <PageIntro
+        title="Administrateurs"
+        subtitle="Invitez et gérez les administrateurs des établissements."
+      />
 
-          <p
-            style={{
-              margin: "8px 0 0",
-              color: T.stone,
-              fontSize: 14,
-            }}
-          >
-            Gérez les administrateurs des établissements Hôtel Halo.
-          </p>
-        </div>
+      <div className="two-column-grid">
+        <section className="panel">
+          <div className="panel-header">
+            <div>
+              <h2>Inviter un administrateur</h2>
 
-        <button
-          onClick={openInvite}
-          style={{
-            border: "none",
-            borderRadius: 12,
-            padding: "12px 18px",
-            background: T.teal,
-            color: "#fff",
-            fontWeight: 700,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-          }}
-        >
-          <Plus size={18} />
-          Inviter un administrateur
-        </button>
+              <p>
+                L'administrateur recevra un lien
+                sécurisé pour créer son mot de passe.
+              </p>
+            </div>
+          </div>
+
+          <form onSubmit={sendInvitation}>
+            <div className="field">
+              <label>Établissement</label>
+
+              <div className="input-wrapper">
+                <Building2
+                  size={22}
+                  className="input-icon"
+                />
+
+                <select
+                  value={hotelId}
+                  onChange={(e) =>
+                    setHotelId(e.target.value)
+                  }
+                >
+                  <option value="">
+                    Sélectionner un établissement
+                  </option>
+
+                  {hotels.map((hotel) => (
+                    <option
+                      key={hotel.id}
+                      value={hotel.id}
+                    >
+                      {hotel.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <Field
+              label="Nom complet"
+              type="text"
+              value={fullName}
+              onChange={setFullName}
+              placeholder="Nom de l'administrateur"
+              icon={User}
+            />
+
+            <Field
+              label="Adresse email"
+              type="email"
+              value={email}
+              onChange={setEmail}
+              placeholder="administrateur@hotel.com"
+              icon={Mail}
+            />
+
+            {error && (
+              <Message text={error} />
+            )}
+
+            {message && (
+              <div className="success-message">
+                <CheckCircle2 size={19} />
+                <span>{message}</span>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="primary-button"
+              disabled={sending}
+            >
+              {sending ? (
+                "Création..."
+              ) : (
+                <>
+                  <Send size={18} />
+                  Créer l'invitation
+                </>
+              )}
+            </button>
+          </form>
+        </section>
+
+        <section className="panel">
+          <div className="panel-header">
+            <div>
+              <h2>Administrateurs actifs</h2>
+
+              <p>
+                Les comptes administrateurs
+                actuellement associés aux hôtels.
+              </p>
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="empty-state">
+              <strong>Chargement...</strong>
+            </div>
+          ) : administrators.length === 0 ? (
+            <EmptyState
+              icon={Users}
+              title="Aucun administrateur"
+              text="Aucun administrateur d'hôtel n'est encore enregistré."
+            />
+          ) : (
+            <div className="admin-list">
+              {administrators.map((admin) => (
+                <div
+                  className="admin-list-item"
+                  key={admin.id}
+                >
+                  <div className="table-avatar">
+                    <User size={18} />
+                  </div>
+
+                  <div className="admin-list-main">
+                    <strong>
+                      {admin.full_name}
+                    </strong>
+
+                    <span>
+                      {admin.email}
+                    </span>
+
+                    <small>
+                      {getHotelName(
+                        admin.hotel_id
+                      )}
+                    </small>
+                  </div>
+
+                  <StatusBadge
+                    status={admin.status}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
 
-      {message && (
-        <div
-          style={{
-            padding: 14,
-            borderRadius: 12,
-            background: T.tealLight,
-            color: T.tealDeep,
-            fontWeight: 600,
-          }}
-        >
-          {message}
-        </div>
-      )}
-
-      {error && (
-        <div
-          style={{
-            padding: 14,
-            borderRadius: 12,
-            background: T.redLight,
-            color: T.red,
-            fontWeight: 600,
-          }}
-        >
-          {error}
-        </div>
-      )}
-
-      <div
-        style={{
-          background: T.card,
-          border: `1px solid ${T.line}`,
-          borderRadius: 18,
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            padding: "18px 20px",
-            borderBottom: `1px solid ${T.line}`,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
+      <section className="panel">
+        <div className="panel-header">
           <div>
-            <div
-              style={{
-                fontSize: 17,
-                fontWeight: 800,
-                color: T.ink,
-              }}
-            >
-              Comptes administrateurs
-            </div>
+            <h2>Invitations en attente</h2>
 
-            <div
-              style={{
-                marginTop: 4,
-                color: T.stone,
-                fontSize: 13,
-              }}
-            >
-              {administrators.length} compte
-              {administrators.length > 1 ? "s" : ""}
-            </div>
+            <p>
+              Les invitations qui n'ont pas encore
+              été activées.
+            </p>
           </div>
+
+          <button
+            className="secondary-button"
+            onClick={loadData}
+          >
+            <RefreshCw size={18} />
+            Actualiser
+          </button>
         </div>
 
-        {loading ? (
-          <div
-            style={{
-              padding: 30,
-              textAlign: "center",
-              color: T.stone,
-            }}
-          >
-            Chargement...
-          </div>
-        ) : administrators.length === 0 ? (
-          <div
-            style={{
-              padding: 40,
-              textAlign: "center",
-              color: T.stone,
-            }}
-          >
-            Aucun administrateur pour le moment.
-          </div>
+        {invitations.length === 0 ? (
+          <EmptyState
+            icon={Mail}
+            title="Aucune invitation en attente"
+            text="Toutes les invitations ont été traitées."
+          />
         ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-                minWidth: 700,
-              }}
-            >
+          <div className="table-wrapper">
+            <table className="data-table">
               <thead>
-                <tr
-                  style={{
-                    background: T.paper,
-                    textAlign: "left",
-                  }}
-                >
-                  <th style={{ padding: 14 }}>Nom</th>
-                  <th style={{ padding: 14 }}>Email</th>
-                  <th style={{ padding: 14 }}>Établissement</th>
-                  <th style={{ padding: 14 }}>Rôle</th>
-                  <th style={{ padding: 14 }}>Statut</th>
+                <tr>
+                  <th>Administrateur</th>
+                  <th>Établissement</th>
+                  <th>Email</th>
+                  <th>Expiration</th>
+                  <th>Action</th>
                 </tr>
               </thead>
 
               <tbody>
-                {administrators.map((admin) => (
-                  <tr
-                    key={admin.id}
-                    style={{
-                      borderTop: `1px solid ${T.line}`,
-                    }}
-                  >
-                    <td
-                      style={{
-                        padding: 14,
-                        fontWeight: 700,
-                        color: T.ink,
-                      }}
-                    >
-                      {admin.full_name}
+                {invitations.map(
+                  (invitation) => (
+                    <tr key={invitation.id}>
+                      <td>
+                        <strong>
+                          {invitation.full_name}
+                        </strong>
+                      </td>
+
+                      <td>
+                        {getHotelName(
+                          invitation.hotel_id
+                        )}
+                      </td>
+
+                      <td>
+                        {invitation.email}
+                      </td>
+
+                      <td>
+                        {invitation.expires_at
+                          ? new Date(
+                              invitation.expires_at
+                            ).toLocaleString(
+                              "fr-FR"
+                            )
+                          : "—"}
+                      </td>
+
+                      <td>
+                        <button
+                          className="secondary-button small-button"
+                          onClick={() =>
+                            resendInvitation(
+                              invitation.id
+                            )
+                          }
+                        >
+                          <RefreshCw size={16} />
+                          Renvoyer
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </>
+  );
+  }
+
+function Billing() {
+  const [invoices, setInvoices] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  async function loadInvoices() {
+    setLoading(true);
+
+    const { data, error } = await supabase
+      .from("payments")
+      .select("*")
+      .order("paid_at", {
+        ascending: false,
+      });
+
+    if (error) {
+      console.error(error);
+    } else {
+      setInvoices(data || []);
+    }
+
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    loadInvoices();
+  }, []);
+
+  return (
+    <>
+      <PageIntro
+        title="Facturation"
+        subtitle="Suivez les paiements et la facturation de la plateforme."
+      />
+
+      <section className="panel">
+        <div className="panel-header">
+          <div>
+            <h2>Paiements</h2>
+            <p>
+              Vue globale des paiements enregistrés.
+            </p>
+          </div>
+
+          <button
+            className="secondary-button"
+            onClick={loadInvoices}
+          >
+            <RefreshCw size={18} />
+            Actualiser
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="empty-state">
+            <strong>Chargement...</strong>
+          </div>
+        ) : invoices.length === 0 ? (
+          <EmptyState
+            icon={Receipt}
+            title="Aucun paiement"
+            text="Aucun paiement n'est encore enregistré."
+          />
+        ) : (
+          <div className="table-wrapper">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Référence</th>
+                  <th>Montant</th>
+                  <th>Méthode</th>
+                  <th>Statut</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {invoices.map((invoice) => (
+                  <tr key={invoice.id}>
+                    <td>
+                      <strong>
+                        #{invoice.id}
+                      </strong>
                     </td>
 
-                    <td style={{ padding: 14, color: T.inkSoft }}>
-                      {admin.email}
+                    <td>
+                      {Number(
+                        invoice.amount || 0
+                      ).toLocaleString("fr-FR")}{" "}
+                      $
                     </td>
 
-                    <td style={{ padding: 14, color: T.inkSoft }}>
-                      {admin.role === "super_admin"
-                        ? "Plateforme Hôtel Halo"
-                        : getHotelName(admin.hotel_id)}
+                    <td>
+                      {invoice.method || "—"}
                     </td>
 
-                    <td style={{ padding: 14 }}>
-                      <span
-                        style={{
-                          display: "inline-block",
-                          padding: "6px 10px",
-                          borderRadius: 999,
-                          background:
-                            admin.role === "super_admin"
-                              ? T.clayLight
-                              : T.tealLight,
-                          color:
-                            admin.role === "super_admin"
-                              ? T.clay
-                              : T.tealDeep,
-                          fontSize: 12,
-                          fontWeight: 800,
-                        }}
-                      >
-                        {admin.role === "super_admin"
-                          ? "Super-Admin"
-                          : "Administrateur"}
-                      </span>
+                    <td>
+                      <StatusBadge
+                        status={
+                          invoice.status ||
+                          "paid"
+                        }
+                      />
                     </td>
 
-                    <td style={{ padding: 14 }}>
-                      <span
-                        style={{
-                          display: "inline-block",
-                          padding: "6px 10px",
-                          borderRadius: 999,
-                          background:
-                            admin.status === "active"
-                              ? T.sageLight
-                              : T.redLight,
-                          color:
-                            admin.status === "active"
-                              ? T.sage
-                              : T.red,
-                          fontSize: 12,
-                          fontWeight: 800,
-                        }}
-                      >
-                        {admin.status === "active"
-                          ? "Actif"
-                          : admin.status}
-                      </span>
+                    <td>
+                      {invoice.paid_at
+                        ? new Date(
+                            invoice.paid_at
+                          ).toLocaleString(
+                            "fr-FR"
+                          )
+                        : "—"}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        {pendingInvitations.length > 0 && (
-  <div
-    style={{
-      marginTop: 20,
-      background: T.card,
-      border: `1px solid ${T.line}`,
-      borderRadius: 16,
-      padding: 18,
-    }}
-  >
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: 14,
-      }}
-    >
-      <div>
-        <div
-          style={{
-            fontWeight: 800,
-            color: T.ink,
-            fontSize: 16,
-          }}
-        >
-          Invitations en attente
-        </div>
-
-        <div
-          style={{
-            marginTop: 4,
-            color: T.stone,
-            fontSize: 13,
-          }}
-        >
-          Administrateurs qui n’ont pas encore activé leur compte.
-        </div>
-      </div>
-    </div>
-
-    {pendingInvitations.map((invitation) => (
-      <div
-        key={invitation.id}
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 16,
-          padding: "14px 0",
-          borderTop: `1px solid ${T.line}`,
-        }}
-      >
-        <div>
-          <div
-            style={{
-              fontWeight: 700,
-              color: T.ink,
-            }}
-          >
-            {invitation.full_name}
-          </div>
-
-          <div
-            style={{
-              marginTop: 4,
-              color: T.stone,
-              fontSize: 13,
-            }}
-          >
-            {invitation.email}
-          </div>
-
-          <div
-            style={{
-              marginTop: 4,
-              color: T.stone,
-              fontSize: 12,
-            }}
-          >
-            {getHotelName(invitation.hotel_id)}
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => resendInvitation(invitation.id)}
-          style={{
-            border: "none",
-            borderRadius: 10,
-            padding: "10px 14px",
-            background: T.teal,
-            color: "#fff",
-            fontWeight: 800,
-            cursor: "pointer",
-          }}
-        >
-          Renvoyer
-        </button>
-      </div>
-    ))}
-  </div>
-)}
-
-      {showInvite && (
-        <div
-          onClick={() => {
-            if (!sending) setShowInvite(false);
-          }}
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,.45)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 20,
-            zIndex: 1000,
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              width: "100%",
-              maxWidth: 520,
-              background: T.card,
-              borderRadius: 20,
-              padding: 24,
-              boxShadow: "0 20px 60px rgba(0,0,0,.2)",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 20,
-              }}
-            >
-              <div>
-                <h2
-                  style={{
-                    margin: 0,
-                    color: T.ink,
-                    fontSize: 22,
-                  }}
-                >
-                  Inviter un administrateur
-                </h2>
-
-                <p
-                  style={{
-                    margin: "6px 0 0",
-                    color: T.stone,
-                    fontSize: 13,
-                  }}
-                >
-                  L'administrateur recevra un email pour définir son mot de
-                  passe.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowInvite(false)}
-                disabled={sending}
-                style={{
-                  border: "none",
-                  background: "transparent",
-                  fontSize: 24,
-                  color: T.stone,
-                  cursor: "pointer",
-                }}
-              >
-                ×
-              </button>
-            </div>
-
-            <form
-              onSubmit={sendInvitation}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 16,
-              }}
-            >
-              <label>
-                <div
-                  style={{
-                    marginBottom: 7,
-                    fontWeight: 700,
-                    color: T.ink,
-                  }}
-                >
-                  Établissement
-                </div>
-
-                <select
-                  value={hotelId}
-                  onChange={(e) => setHotelId(e.target.value)}
-                  disabled={sending}
-                  style={{
-                    width: "100%",
-                    padding: "12px 13px",
-                    borderRadius: 10,
-                    border: `1px solid ${T.line}`,
-                    background: "#fff",
-                    color: T.ink,
-                  }}
-                >
-                  <option value="">Sélectionner un établissement</option>
-
-                  {hotels
-                    .filter((hotel) => hotel.status === "active")
-                    .map((hotel) => (
-                      <option key={hotel.id} value={hotel.id}>
-                        {hotel.name}
-                      </option>
-                    ))}
-                </select>
-              </label>
-
-              <label>
-                <div
-                  style={{
-                    marginBottom: 7,
-                    fontWeight: 700,
-                    color: T.ink,
-                  }}
-                >
-                  Nom complet
-                </div>
-
-                <input
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  disabled={sending}
-                  placeholder="Ex. Patrick Mbuyi"
-                  style={{
-                    width: "100%",
-                    padding: "12px 13px",
-                    borderRadius: 10,
-                    border: `1px solid ${T.line}`,
-                    outline: "none",
-                  }}
-                />
-              </label>
-
-              <label>
-                <div
-                  style={{
-                    marginBottom: 7,
-                    fontWeight: 700,
-                    color: T.ink,
-                  }}
-                >
-                  Adresse email
-                </div>
-
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={sending}
-                  placeholder="administrateur@hotel.com"
-                  style={{
-                    width: "100%",
-                    padding: "12px 13px",
-                    borderRadius: 10,
-                    border: `1px solid ${T.line}`,
-                    outline: "none",
-                  }}
-                />
-              </label>
-
-              <div
-                style={{
-                  padding: 12,
-                  borderRadius: 10,
-                  background: T.paper,
-                  color: T.stone,
-                  fontSize: 13,
-                  lineHeight: 1.5,
-                }}
-              >
-                <strong style={{ color: T.ink }}>
-                  Rôle :
-                </strong>{" "}
-                Administrateur de l'établissement.
-                <br />
-                Il pourra ensuite gérer les agents Gérant et Réceptionniste.
-              </div>
-
-              {error && (
-                <div
-                  style={{
-                    padding: 12,
-                    borderRadius: 10,
-                    background: T.redLight,
-                    color: T.red,
-                    fontSize: 13,
-                    fontWeight: 600,
-                  }}
-                >
-                  {error}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={sending}
-                style={{
-                  border: "none",
-                  borderRadius: 12,
-                  padding: "13px 16px",
-                  background: sending ? T.stone : T.teal,
-                  color: "#fff",
-                  fontWeight: 800,
-                  cursor: sending ? "not-allowed" : "pointer",
-                }}
-              >
-                {sending ? "Envoi en cours..." : "Envoyer l'invitation"}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* =========================================================
-   BILLING
-========================================================= */
-
-function Billing() {
-  return (
-    <>
-      <PageIntro
-        eyebrow="PLATEFORME"
-        title="Facturation"
-        description="Suivez la facturation des abonnements Hôtel Halo."
-      />
-
-      <div className="kpi-grid">
-        <KpiCard
-          icon={Receipt}
-          label="MRR"
-          value="0 $"
-        />
-
-        <KpiCard
-          icon={CheckCircle2}
-          label="Factures payées"
-          value="0"
-        />
-
-        <KpiCard
-          icon={AlertCircle}
-          label="En attente"
-          value="0"
-        />
-
-        <KpiCard
-          icon={XCircle}
-          label="En retard"
-          value="0"
-        />
-      </div>
-
-      <section className="panel">
-        <EmptyState
-          icon={Receipt}
-          title="Aucune facture"
-          text="Les factures apparaîtront ici lorsque les abonnements seront activés."
-        />
+        )}
       </section>
     </>
   );
 }
-
-/* =========================================================
-   SETTINGS
-========================================================= */
 
 function SettingsPage() {
   return (
     <>
       <PageIntro
-        eyebrow="CONFIGURATION"
         title="Réglages"
-        description="Configuration générale de la plateforme Hôtel Halo."
+        subtitle="Paramètres généraux de la plateforme Hôtel Halo."
       />
 
       <section className="panel">
-        <div className="settings-row">
-          <div className="settings-icon">
-            <Shield size={22} />
-          </div>
-
+        <div className="panel-header">
           <div>
-            <h3>Sécurité et accès</h3>
+            <h2>Configuration de la plateforme</h2>
+
             <p>
-              Les rôles et les autorisations sont contrôlés côté base de données.
+              Les paramètres avancés seront disponibles
+              dans les prochaines étapes.
             </p>
           </div>
         </div>
 
-        <div className="settings-row">
-          <div className="settings-icon">
-            <Receipt size={22} />
+        <div className="settings-list">
+          <div className="settings-item">
+            <div className="settings-icon">
+              <DollarSign size={21} />
+            </div>
+
+            <div>
+              <strong>Plans et tarifs</strong>
+              <span>
+                Gestion des abonnements SaaS.
+              </span>
+            </div>
+
+            <span className="coming-soon">
+              Bientôt
+            </span>
           </div>
 
-          <div>
-            <h3>Plans tarifaires</h3>
-            <p>
-              Les offres Starter, Pro et Enterprise seront configurées ici.
-            </p>
+          <div className="settings-item">
+            <div className="settings-icon">
+              <Shield size={21} />
+            </div>
+
+            <div>
+              <strong>Sécurité</strong>
+              <span>
+                Paramètres de sécurité et accès.
+              </span>
+            </div>
+
+            <span className="coming-soon">
+              Bientôt
+            </span>
+          </div>
+
+          <div className="settings-item">
+            <div className="settings-icon">
+              <Bell size={21} />
+            </div>
+
+            <div>
+              <strong>Notifications</strong>
+              <span>
+                Configuration des notifications.
+              </span>
+            </div>
+
+            <span className="coming-soon">
+              Bientôt
+            </span>
           </div>
         </div>
       </section>
@@ -2040,58 +1671,89 @@ function SettingsPage() {
   );
 }
 
-/* =========================================================
-   HOTEL PLACEHOLDER
-========================================================= */
-
 function HotelPlaceholder({ profile, onLogout }) {
   return (
     <div className="hotel-placeholder">
-      <style>{globalStyles}</style>
-
       <div className="hotel-placeholder-card">
         <div className="brand-logo">H</div>
 
-        <h1>Bienvenue sur Hôtel Halo</h1>
+        <h1>
+          Bienvenue sur Hôtel Halo
+        </h1>
 
         <p>
-          Votre espace administrateur hôtel sera disponible
-          dans les prochaines étapes.
+          Bonjour{" "}
+          <strong>
+            {profile.full_name}
+          </strong>
+          .
         </p>
 
-        <div className="profile-box">
-          <strong>{profile.full_name}</strong>
-          <span>{roleLabel(profile.role)}</span>
+        <p>
+          Votre espace Administrateur d'hôtel
+          sera disponible ici.
+        </p>
+
+        <div className="placeholder-badge">
+          <Shield size={18} />
+          Compte sécurisé
         </div>
 
         <button
           className="primary-button"
           onClick={onLogout}
         >
-          <LogOut size={19} />
-          Se déconnecter
+          <LogOut size={18} />
+          Déconnexion
         </button>
       </div>
     </div>
   );
 }
 
-/* =========================================================
-   UI HELPERS
-========================================================= */
+function Modal({ title, onClose, children }) {
+  return (
+    <div
+      className="modal-overlay"
+      onMouseDown={(event) => {
+        if (
+          event.target === event.currentTarget
+        ) {
+          onClose();
+        }
+      }}
+    >
+      <div className="modal-card">
+        <div className="modal-header">
+          <h2>{title}</h2>
+
+          <button
+            className="icon-button"
+            onClick={onClose}
+            type="button"
+          >
+            <X size={22} />
+          </button>
+        </div>
+
+        <div className="modal-body">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function PageIntro({
-  eyebrow,
   title,
-  description,
+  subtitle,
   action,
 }) {
   return (
     <div className="page-intro">
       <div>
-        <div className="eyebrow">{eyebrow}</div>
         <h1>{title}</h1>
-        <p>{description}</p>
+        <p>{subtitle}</p>
       </div>
 
       {action && (
@@ -2103,24 +1765,52 @@ function PageIntro({
   );
 }
 
-function KpiCard({
-  icon: Icon,
-  label,
-  value,
-  small = false,
-}) {
+function StatusBadge({ status }) {
+  const normalized =
+    String(status || "")
+      .toLowerCase()
+      .trim();
+
+  let label = status || "Inconnu";
+
+  if (
+    normalized === "active" ||
+    normalized === "actif"
+  ) {
+    label = "Actif";
+  } else if (
+    normalized === "suspended" ||
+    normalized === "suspendu"
+  ) {
+    label = "Suspendu";
+  } else if (
+    normalized === "paid" ||
+    normalized === "payée" ||
+    normalized === "paye"
+  ) {
+    label = "Payée";
+  } else if (
+    normalized === "pending" ||
+    normalized === "en attente"
+  ) {
+    label = "En attente";
+  } else if (
+    normalized === "overdue" ||
+    normalized === "en retard"
+  ) {
+    label = "En retard";
+  }
+
   return (
-    <div className="kpi-card">
-      <div className="kpi-icon">
-        <Icon size={24} />
-      </div>
-
-      <span>{label}</span>
-
-      <strong className={small ? "kpi-small" : ""}>
-        {value}
-      </strong>
-    </div>
+    <span
+      className={`status-badge status-${normalized.replace(
+        /\s+/g,
+        "-"
+      )}`}
+    >
+      <span className="status-dot" />
+      {label}
+    </span>
   );
 }
 
@@ -2132,11 +1822,12 @@ function EmptyState({
   return (
     <div className="empty-state">
       <div className="empty-icon">
-        <Icon size={38} />
+        <Icon size={28} />
       </div>
 
-      <h3>{title}</h3>
-      <p>{text}</p>
+      <strong>{title}</strong>
+
+      <span>{text}</span>
     </div>
   );
 }
@@ -2147,8 +1838,7 @@ function pageTitle(page) {
   );
 
   return item?.label || "Tableau de bord";
-}
-
+                      }
 function roleLabel(role) {
   switch (role) {
     case "super_admin":
@@ -2177,10 +1867,6 @@ function formatDate(value) {
     return "—";
   }
 }
-
-/* =========================================================
-   GLOBAL STYLES
-========================================================= */
 
 const globalStyles = `
 * {
@@ -2217,8 +1903,6 @@ button:disabled {
   opacity: 0.65;
 }
 
-/* AUTH */
-
 .auth-page {
   min-height: 100vh;
   display: flex;
@@ -2245,7 +1929,8 @@ button:disabled {
   border: 1px solid ${T.line};
   border-radius: 32px;
   padding: 58px;
-  box-shadow: 0 25px 80px rgba(27,36,48,0.08);
+  box-shadow:
+    0 25px 80px rgba(27, 36, 48, 0.08);
 }
 
 .auth-brand {
@@ -2363,141 +2048,156 @@ button:disabled {
   border-radius: 18px;
   font-size: 19px;
   margin-top: 8px;
-}
-
-.primary-small-button {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
   gap: 9px;
-  padding: 13px 19px;
-  border-radius: 13px;
+}
+
+.primary-small-button {
+  min-height: 46px;
+  padding: 0 17px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
 }
 
 .link-button {
+  display: block;
   width: 100%;
   border: 0;
   background: transparent;
   color: ${T.teal};
   font-weight: 700;
-  font-size: 17px;
-  padding: 22px 0 0;
+  margin-top: 18px;
+  padding: 8px;
 }
 
 .message {
   display: flex;
+  gap: 9px;
   align-items: flex-start;
-  gap: 10px;
-  padding: 14px 16px;
-  border-radius: 14px;
-  margin: 12px 0 20px;
-  line-height: 1.4;
-}
-
-.message.error {
-  color: ${T.red};
+  padding: 13px 14px;
+  border-radius: 12px;
   background: ${T.redLight};
+  color: ${T.red};
+  font-weight: 600;
+  margin-bottom: 12px;
 }
 
-/* APP */
+.loading-screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: ${T.paper};
+  color: ${T.tealDeep};
+}
+
+.loading-screen strong {
+  font-size: 23px;
+}
+
+.loading-screen span {
+  color: ${T.stone};
+}
 
 .app-shell {
   min-height: 100vh;
-  display: flex;
-  background: ${T.paper};
 }
 
 .sidebar {
   position: fixed;
-  inset: 0 auto 0 0;
+  left: 0;
+  top: 0;
+  bottom: 0;
   width: 292px;
   background: white;
   border-right: 1px solid ${T.line};
+  padding: 25px;
   display: flex;
   flex-direction: column;
   z-index: 30;
 }
 
-.sidebar-header {
-  min-height: 118px;
+.sidebar-brand {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 22px 24px;
-  border-bottom: 1px solid ${T.line};
+  gap: 13px;
 }
 
-.sidebar-header .brand-logo {
-  width: 64px;
-  height: 64px;
-  border-radius: 19px;
-  font-size: 31px;
+.sidebar-brand .brand-logo {
+  width: 52px;
+  height: 52px;
+  border-radius: 15px;
+  font-size: 25px;
+}
+
+.brand-text strong,
+.brand-text span {
+  display: block;
 }
 
 .brand-text strong {
-  display: block;
-  font-size: 21px;
+  font-size: 19px;
 }
 
 .brand-text span {
-  display: block;
   color: ${T.stone};
-  font-size: 14px;
-  margin-top: 5px;
+  font-size: 12px;
+  margin-top: 3px;
 }
 
 .sidebar-section-title {
-  padding: 38px 28px 18px;
-  color: ${T.stone};
+  font-size: 11px;
   font-weight: 800;
-  font-size: 13px;
-  letter-spacing: 2px;
+  color: ${T.stone};
+  letter-spacing: 1.5px;
+  margin: 42px 0 13px;
 }
 
 .sidebar-nav {
-  padding: 0 16px;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
 }
 
 .nav-item {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 17px;
   border: 0;
   background: transparent;
   color: ${T.inkSoft};
-  padding: 17px 17px;
-  border-radius: 16px;
-  text-align: left;
+  padding: 13px 14px;
+  border-radius: 13px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
   font-weight: 700;
-  font-size: 17px;
+  text-align: left;
 }
 
-.nav-item:hover {
-  background: ${T.paper};
-}
-
+.nav-item:hover,
 .nav-item.active {
-  color: ${T.tealDeep};
   background: ${T.tealLight};
+  color: ${T.tealDeep};
 }
 
 .sidebar-bottom {
   margin-top: auto;
-  padding: 20px 16px 22px;
 }
 
 .security-box {
   display: flex;
-  gap: 12px;
-  padding: 15px;
-  border-radius: 15px;
-  background: ${T.sageLight};
+  gap: 11px;
+  align-items: center;
+  background: ${T.paper};
+  padding: 14px;
+  border-radius: 13px;
+  margin-bottom: 12px;
   color: ${T.tealDeep};
-  margin-bottom: 13px;
 }
 
 .security-box strong,
@@ -2506,9 +2206,9 @@ button:disabled {
 }
 
 .security-box span {
-  margin-top: 4px;
   font-size: 12px;
-  opacity: 0.75;
+  color: ${T.stone};
+  margin-top: 3px;
 }
 
 .logout-button {
@@ -2516,11 +2216,11 @@ button:disabled {
   border: 0;
   background: transparent;
   color: ${T.red};
+  padding: 13px;
+  border-radius: 13px;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 14px 16px;
-  border-radius: 13px;
   font-weight: 700;
   text-align: left;
 }
@@ -2600,14 +2300,6 @@ button:disabled {
   margin-bottom: 35px;
 }
 
-.eyebrow {
-  color: ${T.teal};
-  font-size: 14px;
-  font-weight: 800;
-  letter-spacing: 2px;
-  margin-bottom: 10px;
-}
-
 .page-intro h1 {
   margin: 0;
   font-size: 46px;
@@ -2626,7 +2318,8 @@ button:disabled {
 
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
   gap: 20px;
   margin-bottom: 28px;
 }
@@ -2651,20 +2344,20 @@ button:disabled {
   margin-bottom: 23px;
 }
 
-.kpi-card > span {
+.kpi-content span {
   display: block;
   color: ${T.stone};
   font-weight: 700;
   margin-bottom: 8px;
 }
 
-.kpi-card > strong {
+.kpi-content strong {
   display: block;
   font-size: 32px;
 }
 
-.kpi-small {
-  font-size: 23px !important;
+.kpi-content .small-value {
+  font-size: 23px;
 }
 
 .panel {
@@ -2757,24 +2450,24 @@ td {
   border-bottom: 1px solid ${T.line};
 }
 
-.hotel-name-cell {
+.table-primary {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.hotel-name-cell strong,
-.hotel-name-cell span {
+.table-primary strong,
+.table-primary span {
   display: block;
 }
 
-.hotel-name-cell span {
+.table-primary span {
   color: ${T.stone};
   font-size: 12px;
   margin-top: 4px;
 }
 
-.table-icon {
+.table-avatar {
   width: 43px;
   height: 43px;
   border-radius: 12px;
@@ -2785,13 +2478,7 @@ td {
   color: ${T.teal};
 }
 
-.contact-cell span {
-  display: block;
-  margin: 3px 0;
-}
-
-.status-badge,
-.role-badge {
+.status-badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -2801,19 +2488,28 @@ td {
   font-weight: 800;
 }
 
-.status-active {
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.status-active,
+.status-paid {
   background: ${T.sageLight};
   color: ${T.tealDeep};
 }
 
-.status-suspended {
+.status-suspended,
+.status-overdue {
   background: ${T.redLight};
   color: ${T.red};
 }
 
-.role-badge {
-  background: ${T.tealLight};
-  color: ${T.tealDeep};
+.status-pending {
+  background: ${T.amberLight};
+  color: ${T.clay};
 }
 
 .empty-state {
@@ -2850,54 +2546,10 @@ td {
   line-height: 1.5;
 }
 
-.inline-loading {
-  min-height: 250px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  color: ${T.stone};
-}
-
-.loading-spinner {
-  width: 30px;
-  height: 30px;
-  border: 3px solid ${T.tealLight};
-  border-top-color: ${T.teal};
-  border-radius: 50%;
-  animation: haloSpin 0.8s linear infinite;
-}
-
-.loading-spinner.small {
-  width: 22px;
-  height: 22px;
-}
-
-.loading-screen {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  background: ${T.paper};
-  color: ${T.tealDeep};
-}
-
-.loading-screen strong {
-  font-size: 23px;
-}
-
-.loading-screen span {
-  color: ${T.stone};
-}
-
-/* MODAL */
-
-.modal-backdrop {
+.modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(27,36,48,0.42);
+  background: rgba(27, 36, 48, 0.42);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2905,14 +2557,15 @@ td {
   z-index: 100;
 }
 
-.modal {
+.modal-card {
   width: min(100%, 700px);
   max-height: 92vh;
   overflow-y: auto;
   background: white;
   border-radius: 26px;
   border: 1px solid ${T.line};
-  box-shadow: 0 30px 100px rgba(27,36,48,0.2);
+  box-shadow:
+    0 30px 100px rgba(27, 36, 48, 0.2);
   padding: 30px;
 }
 
@@ -2923,100 +2576,13 @@ td {
   margin-bottom: 30px;
 }
 
-.modal-icon {
-  width: 53px;
-  height: 53px;
-  border-radius: 15px;
-  background: ${T.tealLight};
-  color: ${T.teal};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 16px;
-}
-
 .modal-header h2 {
   margin: 0;
   font-size: 27px;
 }
 
-.modal-header p {
-  margin: 7px 0 0;
-  color: ${T.stone};
-}
-
-.modal-close {
-  border: 0;
-  background: ${T.paper};
-  width: 43px;
-  height: 43px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: ${T.inkSoft};
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-}
-
-.form-grid .full {
-  grid-column: 1 / -1;
-}
-
-.modal .field {
-  margin: 0;
-}
-
-.modal .field input,
-.modal .field select {
+.modal-body {
   width: 100%;
-  min-height: 56px;
-  border: 1px solid ${T.line};
-  border-radius: 13px;
-  outline: none;
-  padding: 0 15px;
-  background: white;
-  color: ${T.ink};
-}
-
-.modal .field input:focus,
-.modal .field select:focus {
-  border-color: ${T.teal};
-  box-shadow: 0 0 0 3px ${T.tealLight};
-}
-
-.simple-input-icon {
-  min-height: 56px;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  border: 1px solid ${T.line};
-  border-radius: 13px;
-  padding: 0 14px;
-}
-
-.simple-input-icon:focus-within {
-  border-color: ${T.teal};
-  box-shadow: 0 0 0 3px ${T.tealLight};
-}
-
-.simple-input-icon svg {
-  color: ${T.stone};
-  flex: 0 0 auto;
-}
-
-.simple-input-icon input {
-  border: 0 !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-}
-
-.modal-error {
-  margin-bottom: 0;
 }
 
 .modal-actions {
@@ -3026,17 +2592,20 @@ td {
   margin-top: 30px;
 }
 
-/* SETTINGS */
-
-.settings-row {
+.settings-list {
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
+}
+
+.settings-item {
+  display: flex;
+  align-items: center;
   gap: 17px;
   padding: 22px 0;
   border-bottom: 1px solid ${T.line};
 }
 
-.settings-row:last-child {
+.settings-item:last-child {
   border-bottom: 0;
 }
 
@@ -3052,16 +2621,27 @@ td {
   flex: 0 0 auto;
 }
 
-.settings-row h3 {
-  margin: 0 0 6px;
+.settings-item strong,
+.settings-item span {
+  display: block;
 }
 
-.settings-row p {
-  margin: 0;
+.settings-item > div:nth-child(2) {
+  flex: 1;
+}
+
+.settings-item span {
   color: ${T.stone};
+  margin-top: 4px;
 }
 
-/* HOTEL */
+.coming-soon {
+  font-size: 12px;
+  font-weight: 800;
+  background: ${T.paper};
+  padding: 7px 10px;
+  border-radius: 999px;
+}
 
 .hotel-placeholder {
   min-height: 100vh;
@@ -3094,24 +2674,79 @@ td {
   line-height: 1.6;
 }
 
-.profile-box {
+.placeholder-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   background: ${T.tealLight};
-  border-radius: 15px;
-  padding: 17px;
-  margin: 25px 0;
+  color: ${T.tealDeep};
+  padding: 10px 14px;
+  border-radius: 999px;
+  font-weight: 700;
+  margin: 15px 0 25px;
 }
 
-.profile-box strong,
-.profile-box span {
+.admin-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-list-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 0;
+  border-bottom: 1px solid ${T.line};
+}
+
+.admin-list-item:last-child {
+  border-bottom: 0;
+}
+
+.admin-list-main {
+  flex: 1;
+}
+
+.admin-list-main strong,
+.admin-list-main span,
+.admin-list-main small {
   display: block;
 }
 
-.profile-box span {
-  color: ${T.tealDeep};
-  margin-top: 5px;
+.admin-list-main span,
+.admin-list-main small {
+  color: ${T.stone};
+  margin-top: 3px;
 }
 
-/* MOBILE */
+.success-message {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  padding: 13px 14px;
+  border-radius: 12px;
+  background: ${T.tealLight};
+  color: ${T.tealDeep};
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.toolbar .search-box {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.small-button {
+  padding: 8px 11px;
+  font-size: 13px;
+}
 
 .mobile-menu-button,
 .sidebar-close {
@@ -3126,7 +2761,8 @@ td {
 
 @media (max-width: 1050px) {
   .kpi-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
   }
 
   .sidebar {
@@ -3158,7 +2794,7 @@ td {
     display: block;
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.35);
+    background: rgba(0, 0, 0, 0.35);
     z-index: 20;
   }
 }
@@ -3219,15 +2855,16 @@ td {
     flex-direction: column;
   }
 
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
   .form-grid {
     grid-template-columns: 1fr;
   }
 
-  .form-grid .full {
-    grid-column: auto;
-  }
-
-  .modal {
+  .modal-card {
     padding: 22px;
     border-radius: 21px;
   }
@@ -3248,4 +2885,17 @@ td {
 }
 `;
 
-export default App;
+function Styles() {
+  return <style>{globalStyles}</style>;
+}
+
+const OriginalApp = App;
+
+export default function AppWithStyles() {
+  return (
+    <>
+      <Styles />
+      <OriginalApp />
+    </>
+  );
+        }
