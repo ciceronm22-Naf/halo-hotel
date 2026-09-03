@@ -1237,12 +1237,9 @@ function Administrators() {
     } = await supabase.auth.getSession();
 
     if (!session?.access_token) {
-      throw new Error(
-        "Votre session Super-Admin est invalide."
-      );
+      throw new Error("Votre session Super-Admin est invalide.");
     }
 
-    // 1. Créer l'invitation côté serveur
     const response = await fetch("/api/admin/invite", {
       method: "POST",
       headers: {
@@ -1261,33 +1258,27 @@ function Administrators() {
 
     if (!response.ok) {
       throw new Error(
-        result?.error ||
-          "Impossible de créer l'invitation."
+        result?.error || "Impossible de créer l'invitation."
       );
     }
 
-    // 2. Envoyer un lien sécurisé à l'adresse existante
-    const redirectTo =
-      `${window.location.origin}/?invite=1`;
-
-    const { error: resetError } =
-      await supabase.auth.resetPasswordForEmail(
-        normalizedEmail,
-        {
-          redirectTo,
-        }
-      );
-
-    if (resetError) {
+    if (!result?.invitation_token) {
       throw new Error(
-        "L'invitation a été créée, mais l'e-mail n'a pas pu être envoyé : " +
-          resetError.message
+        "L'invitation a été créée, mais aucun jeton d'activation n'a été reçu."
       );
     }
+
+    const activationUrl =
+      `${window.location.origin}/?invite=1&token=${encodeURIComponent(
+        result.invitation_token
+      )}`;
 
     setMessage(
-      `Invitation envoyée à ${normalizedEmail}. La personne doit ouvrir l'e-mail et créer son mot de passe.`
+      `Invitation créée pour ${normalizedEmail}. ` +
+      `Le lien d'activation est prêt.`
     );
+
+    console.log("Lien d'activation de test :", activationUrl);
 
     setFullName("");
     setEmail("");
@@ -1296,8 +1287,7 @@ function Administrators() {
     await loadData();
   } catch (err) {
     setError(
-      err.message ||
-        "Une erreur est survenue."
+      err.message || "Une erreur est survenue."
     );
   } finally {
     setSending(false);
