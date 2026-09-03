@@ -1293,6 +1293,52 @@ function Administrators() {
     setSending(false);
   }
 }
+  async function resendInvitation(invitationId) {
+  setMessage("");
+  setError("");
+
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session?.access_token) {
+      throw new Error("Votre session Super-Admin est invalide.");
+    }
+
+    const response = await fetch("/api/admin/resend-invitation", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        invitation_id: Number(invitationId),
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        result?.error || "Impossible de renouveler l'invitation."
+      );
+    }
+
+    const activationUrl =
+      `${window.location.origin}/?invite=1&token=${encodeURIComponent(
+        result.invitation_token
+      )}`;
+
+    setMessage(`Invitation renouvelée pour ${result.email}.`);
+
+    console.log("Nouveau lien d'activation :", activationUrl);
+  } catch (err) {
+    setError(
+      err.message || "Une erreur est survenue."
+    );
+  }
+  }
   function getHotelName(hotelId) {
     const hotel = hotels.find((item) => String(item.id) === String(hotelId));
     return hotel?.name || "—";
