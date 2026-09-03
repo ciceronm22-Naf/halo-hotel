@@ -1170,7 +1170,8 @@ function Administrators() {
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-
+  const [pendingInvitations, setPendingInvitations] = useState([]);
+  
   useEffect(() => {
     loadData();
   }, []);
